@@ -1513,15 +1513,13 @@ div[data-testid="stRadio"] label {
 
 # =====================================================
 # Model Insights Helper Functions (NEW)
-# All numbers below are taken directly from the printed
-# output of DiabetesPredictor_TrainingCode.ipynb
 # =====================================================
 PLOTS_DIR = "plots"
 
 def show_insight_plot(filename, icon, title, explanation, caption=None):
     """Render one training-notebook chart with a title + plain-language
     explanation. Falls back to a friendly placeholder if the image hasn't
-    been added to the plots/ folder yet (e.g. before first GitHub push)."""
+    been added to the plots/ folder yet."""
     st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
@@ -1542,7 +1540,8 @@ def insight_divider(margin=None):
     st.markdown(f'<hr class="insight-divider"{style}>', unsafe_allow_html=True)
 
 def show_insight_plot_slot(filename, caption=None):
-    """Render just the image (or placeholder) for use inside multi-column layouts."""
+    """Render just the image (or placeholder) for use inside multi-column
+    layouts like confusion matrices."""
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
         st.image(path, use_container_width=True, caption=caption)
@@ -1600,9 +1599,7 @@ def _scroll_insights_to_top():
         )
 
 def model_insights_page():
-    """NEW PAGE: shows every chart produced by the Training Notebook,
-    grouped into EDA / Preprocessing / Model Performance / Feature Importance /
-    Final Comparison, each with a plain-language explanation."""
+    """NEW PAGE: shows every chart produced by the Training Notebook."""
 
     st.markdown("<h1 class='main-title'>📈 Model Insights & Visualizations</h1>", unsafe_allow_html=True)
     _scroll_insights_to_top()
@@ -1762,7 +1759,6 @@ def model_insights_page():
         )
         insight_divider()
 
-        # UPDATED: Replaced the three separate ROC columns with a single consolidated view based on your colab code output
         show_insight_plot(
             "11_roc_curve.png", "📈", "ROC Curves for Tuned Models",
             "The ROC curve plots true positive rate against false positive "
@@ -1780,26 +1776,14 @@ def model_insights_page():
             "Which of the 8 health measurements actually drive the Random Forest's predictions?"
         )
 
-        c1, c2 = st.columns(2)
-        with c1:
-            show_insight_plot(
-                "13_feature_importance.png", "🏅", "Full Feature Ranking",
-                "<b>Glucose (39.3%)</b> dominates, followed by <b>BMI (19.5%)</b> and <b>Age (18.5%)</b> — "
-                "together these three drive over three-quarters of the model's decisions. <b>Insulin</b> and "
-                "<b>Pregnancies</b> contribute a modest 4.3% each, while <b>Skin Thickness (3.4%)</b> and "
-                "<b>Blood Pressure (1.9%)</b> contribute the least. This ranking is computed directly from how "
-                "much each feature reduces prediction error across every split in every tree of the forest."
-            )
-        with c2:
-            show_insight_plot(
-                "14_selected_features.png", "✂️", "After Feature Selection",
-                "Keeping only above-median-importance features leaves four: <b>Glucose, BMI, Diabetes "
-                "Pedigree Function, Age</b>. A lighter model trained on just these four reached <b>79.5% test "
-                "accuracy</b> with a smaller overfitting gap (3.2pt vs the full model's 1.0pt on this split) — "
-                "proof that the four dropped features (Pregnancies, Blood Pressure, Skin Thickness, Insulin) "
-                "were adding mostly noise rather than real signal. It's a useful sanity check, even though the "
-                "app itself still collects all 8 fields to stay compatible with the deployed model."
-            )
+        show_insight_plot(
+            "13_feature_importance.png", "🏅", "Feature Ranking",
+            "This ranking is computed directly from how much each feature reduces prediction error across every split in the Random Forest. "
+            "<b>Glucose</b> strongly dominates the model's decision-making process (contributing nearly 40% of the predictive power). "
+            "It is followed by <b>BMI</b> (approx. 21%) and <b>Age</b> (approx. 17%). "
+            "Metrics like <b>Insulin</b> and the <b>Diabetes Pedigree Function</b> offer moderate value, while "
+            "<b>Skin Thickness</b>, <b>Pregnancies</b>, and <b>Blood Pressure</b> contribute the least to the final prediction."
+        )
 
     # =====================================================
     # SECTION 5 — Final Comparison
