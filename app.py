@@ -1513,13 +1513,15 @@ div[data-testid="stRadio"] label {
 
 # =====================================================
 # Model Insights Helper Functions (NEW)
+# All numbers below are taken directly from the printed
+# output of DiabetesPredictor_TrainingCode.ipynb
 # =====================================================
 PLOTS_DIR = "plots"
 
 def show_insight_plot(filename, icon, title, explanation, caption=None):
     """Render one training-notebook chart with a title + plain-language
     explanation. Falls back to a friendly placeholder if the image hasn't
-    been added to the plots/ folder yet."""
+    been added to the plots/ folder yet (e.g. before first GitHub push)."""
     st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
@@ -1540,8 +1542,7 @@ def insight_divider(margin=None):
     st.markdown(f'<hr class="insight-divider"{style}>', unsafe_allow_html=True)
 
 def show_insight_plot_slot(filename, caption=None):
-    """Render just the image (or placeholder) for use inside multi-column
-    layouts like confusion matrices."""
+    """Render just the image (or placeholder) for use inside multi-column layouts."""
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
         st.image(path, use_container_width=True, caption=caption)
@@ -1567,7 +1568,7 @@ def _scroll_insights_to_top():
         components.html(
             f"""
             <script>
-                // nonce: {nonce} 
+                // nonce: {nonce}
                 function scrollAppToTop() {{
                     try {{
                         var w = window.parent;
@@ -1591,13 +1592,17 @@ def _scroll_insights_to_top():
                 scrollAppToTop();
                 setTimeout(scrollAppToTop, 50);
                 setTimeout(scrollAppToTop, 150);
+                setTimeout(scrollAppToTop, 350);
+                setTimeout(scrollAppToTop, 600);
             </script>
             """,
             height=0,
         )
 
 def model_insights_page():
-    """NEW PAGE: shows every chart produced by the Training Notebook."""
+    """NEW PAGE: shows every chart produced by the Training Notebook,
+    grouped into EDA / Preprocessing / Model Performance / Feature Importance /
+    Final Comparison, each with a plain-language explanation."""
 
     st.markdown("<h1 class='main-title'>📈 Model Insights & Visualizations</h1>", unsafe_allow_html=True)
     _scroll_insights_to_top()
@@ -1721,9 +1726,9 @@ def model_insights_page():
             metric_cols = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
             valid_cols = [c for c in metric_cols if c in base_results.columns]
             
-            styled = base_results.style.format({c: "{:.2%}" for c in valid_cols}).background_gradient(
-                cmap="Blues", subset=valid_cols
-            )
+            # The error occurred because .background_gradient() silently requires matplotlib to be installed to generate the color gradient.
+            # I have removed the background_gradient to allow the dataframe to render purely with Streamlit's native engine.
+            styled = base_results.style.format({c: "{:.2%}" for c in valid_cols})
             st.dataframe(styled, use_container_width=True, hide_index=True)
             
         except FileNotFoundError:
@@ -1757,7 +1762,7 @@ def model_insights_page():
         )
         insight_divider()
 
-        # UPDATED: Replaced the three separate ROC columns with a single consolidated view
+        # UPDATED: Replaced the three separate ROC columns with a single consolidated view based on your colab code output
         show_insight_plot(
             "11_roc_curve.png", "📈", "ROC Curves for Tuned Models",
             "The ROC curve plots true positive rate against false positive "
