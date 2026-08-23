@@ -1714,7 +1714,7 @@ def model_insights_page():
             "Comparing the algorithms evaluated head-to-head on the test set."
         )
 
-        st.markdown('<div class="insight-plot-title">📋 Base Model Comparison (before tuning)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="insight-plot-title">📋 Model Comparison </div>', unsafe_allow_html=True)
         
         try:
             base_results = pd.read_csv("model_comparison_results.csv")
