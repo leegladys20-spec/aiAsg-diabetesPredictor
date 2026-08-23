@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import joblib  
+import joblib  # Using joblib instead of pickle to fix the STACK_GLOBAL error
 import plotly.graph_objects as go
 import os
 from datetime import datetime
@@ -18,7 +18,7 @@ st.set_page_config(
 )
 
 # =====================================================
-# Load Model & Scaler with Error Handling
+# Load Model with Error Handling
 # =====================================================
 @st.cache_resource
 def load_model():
@@ -26,31 +26,30 @@ def load_model():
         # Strictly use joblib to avoid UnpicklingError STACK_GLOBAL
         model = joblib.load("final_model.pkl")
         medians_obj = joblib.load("median_imputer.pkl")
-        scaler = joblib.load("standard_scaler.pkl")
         
-        # Extract medians properly depending on the imputer object structure
+        # Handle different imputer formats
         if isinstance(medians_obj, dict):
             median_dict = medians_obj
-        elif hasattr(medians_obj, "statistics_"):
-            columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
-            median_dict = dict(zip(columns, medians_obj.statistics_))
         else:
-            median_dict = {}
+            # If it's a SimpleImputer object
+            try:
+                columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
+                median_dict = dict(zip(columns, medians_obj.statistics_))
+            except:
+                median_dict = {}
         
-        return model, median_dict, scaler
-        
+        return model, median_dict
     except FileNotFoundError as e:
-        st.error(f"Missing required model file: {e}")
+        st.error(f"Model file not found: {e}")
         st.stop()
     except Exception as e:
-        st.error(f"Error loading models: {type(e).__name__} - {str(e)}")
-        st.info("Troubleshooting: Ensure you have `scikit-learn==1.6.1` installed in your environment. The 'STACK_GLOBAL' error is commonly caused by version mismatches between training and deployment.")
+        st.error(f"Error loading model: {type(e).__name__} - {str(e)}")
         st.stop()
 
-model, medians, scaler = load_model()
+model, medians = load_model()
 
 # =====================================================
-# Custom CSS (Design unchanged)
+# Custom CSS
 # =====================================================
 st.markdown("""
 <style>
@@ -545,6 +544,87 @@ div[data-testid="stDownloadButton"] button:hover {
     margin-top: 10px;
 }
 
+/* =====================================================
+   Model Insights Page Styles
+   ===================================================== */
+.insight-section-header {
+    font-size: 26px;
+    font-weight: 800;
+    color: #1A237E;
+    margin: 6px 0 4px 0;
+}
+.insight-section-sub {
+    color: #444;
+    font-size: 16.5px;
+    line-height: 1.85;
+    margin-bottom: 22px;
+    text-align: justify;
+}
+.insight-stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px 10px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border-top: 4px solid #1A237E;
+    height: 100%;
+}
+.insight-stat-icon { font-size: 26px; margin-bottom: 4px; }
+.insight-stat-value { font-size: 20px; font-weight: 800; color: #1A237E; }
+.insight-stat-label {
+    font-size: 12px;
+    color: #777;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.insight-plot-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A237E;
+    margin: 26px 0 12px 0;
+}
+.insight-plot-desc {
+    font-size: 16.5px;
+    color: #444;
+    line-height: 1.85;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    text-align: justify;
+}
+.insight-missing-box {
+    background: #fff8e1;
+    border: 1px dashed #e0a800;
+    border-radius: 12px;
+    padding: 30px 18px;
+    text-align: center;
+    color: #7a5c00;
+    font-size: 13.5px;
+}
+.insight-divider {
+    border: none;
+    border-top: 2px dotted #b0b8e0;
+    margin: 30px 0;
+}
+.insight-nav-step {
+    text-align: center;
+    color: #8891bb;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    padding-top: 10px;
+}
+div[data-testid="stRadio"] > div {
+    gap: 6px;
+}
+div[data-testid="stRadio"] label {
+    background: #f0f2f6;
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin-right: 4px;
+    font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .bmi-info-grid {
@@ -844,21 +924,18 @@ def validate_uploaded_data(df):
     return errors
 
 def predict_patient_manual(patient_data):
-    """Make prediction for manual input with zero replacement and standard scaling."""
+    """Make prediction for manual input with zero replacement."""
     try:
-        # Replace zero values with medians
+        # Replace zero values with medians (for manual input)
         zero_columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
         patient_processed = replace_zero_values(patient_data.copy(), zero_columns)
         
-        # Scale features using the provided standard_scaler.pkl
-        patient_scaled = scaler.transform(patient_processed)
-        
-        # Predict
-        prediction = model.predict(patient_scaled)[0]
+        # Feed raw (unscaled) values directly -- matches training logic provided
+        prediction = model.predict(patient_processed)[0]
         
         # Get probability if available
         if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(patient_scaled)[0]
+            probability = model.predict_proba(patient_processed)[0]
             diabetes_prob = probability[1] * 100
             healthy_prob = probability[0] * 100
         else:
@@ -872,17 +949,15 @@ def predict_patient_manual(patient_data):
         return None, None, None, None
 
 def predict_patient_upload(patient_data):
-    """Make prediction for upload data without zero replacement, but WITH standard scaling."""
+    """Make prediction for upload data - NO zero replacement."""
     try:
-        # Scale the features using the provided standard_scaler.pkl
-        patient_scaled = scaler.transform(patient_data)
-        
-        # Predict
-        prediction = model.predict(patient_scaled)[0]
+        # Feed raw (unscaled) values directly -- matches training logic provided
+        patient_values = patient_data.values if hasattr(patient_data, "values") else patient_data
+        prediction = model.predict(patient_values)[0]
         
         # Get probability if available
         if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(patient_scaled)[0]
+            probability = model.predict_proba(patient_values)[0]
             diabetes_prob = probability[1] * 100
             healthy_prob = probability[0] * 100
         else:
@@ -890,7 +965,7 @@ def predict_patient_upload(patient_data):
             healthy_prob = None
         
         # Flatten raw values for debug display
-        raw_values = list(patient_data.values[0]) if hasattr(patient_data, "__getitem__") else None
+        raw_values = list(patient_values[0]) if hasattr(patient_values, "__getitem__") else None
         
         return prediction, diabetes_prob, healthy_prob, raw_values
     
@@ -1427,99 +1502,12 @@ def history_page():
 
 
 # =====================================================
-# Model Insights Page Styles (NEW)
-# =====================================================
-st.markdown("""
-<style>
-.insight-section-header {
-    font-size: 26px;
-    font-weight: 800;
-    color: #1A237E;
-    margin: 6px 0 4px 0;
-}
-.insight-section-sub {
-    color: #444;
-    font-size: 16.5px;
-    line-height: 1.85;
-    margin-bottom: 22px;
-    text-align: justify;
-}
-.insight-stat-card {
-    background: white;
-    border-radius: 16px;
-    padding: 18px 10px;
-    text-align: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    border-top: 4px solid #1A237E;
-    height: 100%;
-}
-.insight-stat-icon { font-size: 26px; margin-bottom: 4px; }
-.insight-stat-value { font-size: 20px; font-weight: 800; color: #1A237E; }
-.insight-stat-label {
-    font-size: 12px;
-    color: #777;
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-}
-.insight-plot-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #1A237E;
-    margin: 26px 0 12px 0;
-}
-.insight-plot-desc {
-    font-size: 16.5px;
-    color: #444;
-    line-height: 1.85;
-    margin-top: 14px;
-    margin-bottom: 6px;
-    text-align: justify;
-}
-.insight-missing-box {
-    background: #fff8e1;
-    border: 1px dashed #e0a800;
-    border-radius: 12px;
-    padding: 30px 18px;
-    text-align: center;
-    color: #7a5c00;
-    font-size: 13.5px;
-}
-.insight-divider {
-    border: none;
-    border-top: 2px dotted #b0b8e0;
-    margin: 30px 0;
-}
-.insight-nav-step {
-    text-align: center;
-    color: #8891bb;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: .3px;
-    padding-top: 10px;
-}
-div[data-testid="stRadio"] > div {
-    gap: 6px;
-}
-div[data-testid="stRadio"] label {
-    background: #f0f2f6;
-    padding: 8px 16px;
-    border-radius: 20px;
-    margin-right: 4px;
-    font-weight: 600;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# =====================================================
 # Model Insights Helper Functions (NEW)
 # =====================================================
-PLOTS_DIR = "plots"
+PLOTS_DIR = "" # Current directory based on your filenames
 
 def show_insight_plot(filename, icon, title, explanation, caption=None):
-    """Render one training-notebook chart with a title + plain-language
-    explanation. Falls back to a friendly placeholder if the image hasn't
-    been added to the plots/ folder yet."""
+    """Render one training-notebook chart with a title + plain-language explanation."""
     st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
@@ -1527,9 +1515,8 @@ def show_insight_plot(filename, icon, title, explanation, caption=None):
     else:
         st.markdown(f"""
         <div class="insight-missing-box">
-            📁 <b>{filename}</b> wasn't found in the <code>plots/</code> folder yet.<br>
-            <span style="font-size:12.5px;">Export this chart from your notebook and push it into your
-            GitHub repo's <code>plots/</code> folder next to <code>app.py</code>.</span>
+            📁 <b>{filename}</b> wasn't found.<br>
+            <span style="font-size:12.5px;">Please ensure the image file is placed next to <code>app.py</code>.</span>
         </div>
         """, unsafe_allow_html=True)
     st.markdown(f'<div class="insight-plot-desc">{explanation}</div>', unsafe_allow_html=True)
@@ -1540,8 +1527,7 @@ def insight_divider(margin=None):
     st.markdown(f'<hr class="insight-divider"{style}>', unsafe_allow_html=True)
 
 def show_insight_plot_slot(filename, caption=None):
-    """Render just the image (or placeholder) for use inside multi-column
-    layouts like confusion matrices."""
+    """Render just the image (or placeholder) for use inside multi-column layouts."""
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
         st.image(path, use_container_width=True, caption=caption)
@@ -1567,7 +1553,7 @@ def _scroll_insights_to_top():
         components.html(
             f"""
             <script>
-                // nonce: {nonce} 
+                // nonce: {nonce}
                 function scrollAppToTop() {{
                     try {{
                         var w = window.parent;
@@ -1591,6 +1577,8 @@ def _scroll_insights_to_top():
                 scrollAppToTop();
                 setTimeout(scrollAppToTop, 50);
                 setTimeout(scrollAppToTop, 150);
+                setTimeout(scrollAppToTop, 350);
+                setTimeout(scrollAppToTop, 600);
             </script>
             """,
             height=0,
@@ -1660,7 +1648,7 @@ def model_insights_page():
         show_insight_plot(
             "04_correlation_analysis.png", "🔗", "Correlation Analysis After Zero-Value Treatment",
             "This heatmap and bar chart show how every feature relates to the Outcome and each other after treating the impossible zeros. "
-            "<b>Glucose</b> is the strongest single predictor of diabetes (correlation 0.49), followed by <b>BMI</b> (0.31), <b>Insulin</b> (0.30), and <b>Age</b> (0.24). "
+            "<b>Glucose</b> is typically the strongest single predictor of diabetes (correlation 0.49), followed by <b>BMI</b> (0.31), <b>Insulin</b> (0.30), and <b>Age</b> (0.24). "
             "This pattern is confirmed independently by the Random Forest's own feature importance scores further down this page."
         )
 
@@ -1714,27 +1702,34 @@ def model_insights_page():
             "Comparing the algorithms evaluated head-to-head on the test set."
         )
 
-        st.markdown('<div class="insight-plot-title">📋 Model Comparison </div>', unsafe_allow_html=True)
+        st.markdown('<div class="insight-plot-title">📋 Tuned Model Performance Comparison</div>', unsafe_allow_html=True)
         
         try:
-            base_results = pd.read_csv("model_comparison_results.csv")
-            metric_cols = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
+            # First try the updated name, then fallback to original
+            if os.path.exists("model_comparison_results_2.csv"):
+                base_results = pd.read_csv("model_comparison_results_2.csv")
+            else:
+                base_results = pd.read_csv("model_comparison_results.csv")
+                
+            metric_cols = ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
             valid_cols = [c for c in metric_cols if c in base_results.columns]
             
-            styled = base_results.style.format({c: "{:.2%}" for c in valid_cols})
-            st.dataframe(styled, use_container_width=True, hide_index=True)
+            # The error occurred because .background_gradient() silently requires matplotlib to be installed to generate the color gradient.
+            # Removed the background_gradient to allow the dataframe to render purely with Streamlit's native engine.
             
-        except FileNotFoundError:
+            # Since some values might be strings (like "74.68%"), we just display the dataframe directly
+            st.dataframe(base_results, use_container_width=True, hide_index=True)
+            
+        except Exception as e:
             st.markdown(
-                '<div class="insight-missing-box">📁 <b>model_comparison_results.csv</b> wasn\'t found. '
-                'Export the metrics from the notebook and place the file next to <code>app.py</code>.</div>', 
+                f'<div class="insight-missing-box">📁 <b>model_comparison_results_2.csv</b> wasn\'t found or couldn\'t be loaded. '
+                f'Error: {str(e)}</div>', 
                 unsafe_allow_html=True
             )
 
         st.markdown(
-            '<div class="insight-plot-desc">The metrics above are loaded directly from the <code>model_comparison_results.csv</code> file verbatim. '
-            'These numbers highlight the trade-offs each classifier makes between Precision (correctly flagging diabetic patients) '
-            'and Recall (detecting as many true diabetic cases as possible). The Random Forest algorithm historically leads on most core metrics.</div>',
+            '<div class="insight-plot-desc">The metrics above highlight the trade-offs each classifier makes between Precision (correctly flagging diabetic patients) '
+            'and Recall (detecting as many true diabetic cases as possible). The Tuned Random Forest algorithm historically leads on most core metrics.</div>',
             unsafe_allow_html=True
         )
         insight_divider()
@@ -1755,8 +1750,11 @@ def model_insights_page():
         )
         insight_divider()
 
+        # Try to load either 11_roc_curve_2.png or 11_roc_curve.png
+        roc_filename = "11_roc_curve_2.png" if os.path.exists("11_roc_curve_2.png") else "11_roc_curve.png"
+        
         show_insight_plot(
-            "11_roc_curve.png", "📈", "ROC Curves for Tuned Models",
+            roc_filename, "📈", "ROC Curves for Tuned Models",
             "The ROC curve plots true positive rate against false positive "
             "rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the "
             "higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across "
@@ -1776,8 +1774,8 @@ def model_insights_page():
             "13_feature_importance.png", "🏅", "Feature Ranking",
             "This ranking is computed directly from how much each feature reduces prediction error across every split in the Random Forest. "
             "<b>Glucose (~38%)</b> strongly dominates the model's decision-making process. It is followed by <b>BMI (~21%)</b> and <b>Age (~17%)</b>. "
-            "Metrics like <b>Insulin</b> and the <b>Diabetes Pedigree Function</b> offer moderate value, while <b>Skin Thickness</b>, "
-            "<b>Pregnancies</b>, and <b>Blood Pressure</b> contribute the least to the final prediction."
+            "Metrics like <b>Insulin (~9%)</b> and the <b>Diabetes Pedigree Function (~6%)</b> offer moderate value, while <b>Skin Thickness (~4%)</b>, "
+            "<b>Pregnancies (~3%)</b>, and <b>Blood Pressure (~2%)</b> contribute the least to the final prediction."
         )
 
     # =====================================================
@@ -1786,7 +1784,7 @@ def model_insights_page():
     elif section == "🏆 Final Comparison":
         insight_group_header(
             "🏆 Final Model Comparison",
-            "After hyperparameter tuning via 5-fold Grid Search (243 parameter combinations, 1,215 fits), "
+            "After hyperparameter tuning via 5-fold Grid Search, "
             "here's how every candidate stacks up."
         )
 
@@ -2351,8 +2349,8 @@ with tab_diabetes:
             # =====================================================
             with st.expander("🔍 Debug: Raw values fed to the model"):
                 st.success(
-                    "**Model input mode:** Standard Scaled values — matches how "
-                    "your updated model pipeline was trained using `standard_scaler.pkl`."
+                    "**Model input mode:** Raw (unscaled) values — matches how "
+                    "`final_model.pkl` (RandomForestClassifier) was trained. "
                 )
                 
                 debug_rows = st.session_state.get("upload_debug_rows", [])
