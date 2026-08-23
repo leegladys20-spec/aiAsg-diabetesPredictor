@@ -1,12 +1,10 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import joblib  # Using joblib instead of pickle to fix the STACK_GLOBAL error
+import joblib  
 import plotly.graph_objects as go
 import os
-import io
 from datetime import datetime
-import json
 import uuid
 from pathlib import Path
 
@@ -1759,20 +1757,13 @@ def model_insights_page():
         )
         insight_divider()
 
-        st.markdown('<div class="insight-plot-title">📈 ROC Curves</div>', unsafe_allow_html=True)
-        r1, r2, r3 = st.columns(3)
-        with r1:
-            show_insight_plot_slot("11_roc_curve_knn.png")
-        with r2:
-            show_insight_plot_slot("11_roc_curve_svm.png")
-        with r3:
-            show_insight_plot_slot("11_roc_curve_random_forest.png")
-        st.markdown(
-            '<div class="insight-plot-desc">The ROC curve plots true positive rate against false positive '
-            'rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the '
-            'higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across '
-            'the entire range of thresholds, not just the default 50% cutoff.</div>',
-            unsafe_allow_html=True
+        # UPDATED: Replaced the three separate ROC columns with a single consolidated view
+        show_insight_plot(
+            "11_roc_curve.png", "📈", "ROC Curves for Tuned Models",
+            "The ROC curve plots true positive rate against false positive "
+            "rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the "
+            "higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across "
+            "the entire range of thresholds, not just the default 50% cutoff. The Tuned Random Forest model demonstrates the highest AUC performance."
         )
 
     # =====================================================
