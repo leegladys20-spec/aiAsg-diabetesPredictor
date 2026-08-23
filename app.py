@@ -1,14 +1,16 @@
+"""
+COMPLETE STREAMLIT APP EXAMPLE
+with Improved Model Insights Section
+"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.graph_objects as go
 import plotly.express as px
-from sklearn.metrics import confusion_matrix
 import pickle
 import os
- 
+
 # =====================================================
 # PAGE CONFIG & STYLING
 # =====================================================
@@ -17,7 +19,7 @@ st.set_page_config(
     page_icon="🩺",
     layout="wide"
 )
- 
+
 # Your existing CSS styling
 st.markdown("""
 <style>
@@ -27,34 +29,34 @@ st.markdown("""
     font-size: 48px;
     font-weight: 800;
 }
- 
+
 .sub-title {
     text-align: center;
     font-size: 20px;
     color: #555;
     margin-bottom: 40px;
 }
- 
+
 .section {
     font-size: 30px;
     font-weight: 700;
     margin-bottom: 15px;
 }
- 
+
 .insight-section-header {
     font-size: 32px;
     font-weight: 800;
     color: #1A237E;
     margin: 10px 0 8px 0;
 }
- 
+
 .insight-section-sub {
     color: #555;
     font-size: 17px;
     line-height: 1.9;
     margin-bottom: 24px;
 }
- 
+
 .insight-stat-card {
     background: white;
     border-radius: 16px;
@@ -63,14 +65,14 @@ st.markdown("""
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     border-top: 5px solid #1A237E;
 }
- 
+
 .insight-plot-title {
     font-size: 22px;
     font-weight: 700;
     color: #1A237E;
     margin: 28px 0 14px 0;
 }
- 
+
 .insight-plot-desc {
     font-size: 17px;
     color: #555;
@@ -79,11 +81,11 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
- 
+
 # =====================================================
 # HELPER FUNCTIONS FOR MODEL INSIGHTS
 # =====================================================
- 
+
 def load_model_data(model_path="final_model.pkl", results_path="model_comparison_results.csv"):
     """Load model and results data"""
     try:
@@ -99,7 +101,7 @@ def load_model_data(model_path="final_model.pkl", results_path="model_comparison
     except Exception as e:
         st.error(f"Error loading model data: {e}")
         return None, None
- 
+
 def create_model_comparison_chart(results_df):
     """Create interactive model comparison bar chart"""
     if results_df is None:
@@ -128,7 +130,7 @@ def create_model_comparison_chart(results_df):
     )
     
     return fig
- 
+
 def create_confusion_matrices(results_df):
     """Create confusion matrix visualizations"""
     if results_df is None:
@@ -146,29 +148,37 @@ def create_confusion_matrices(results_df):
         matrices[model_name] = cm
     
     return matrices
- 
+
 def plot_confusion_matrix(cm, model_name):
-    """Plot single confusion matrix"""
-    fig, ax = plt.subplots(figsize=(6, 5))
+    """Plot single confusion matrix using Plotly natively"""
+    # Reverse rows so that Plotly draws from top-to-bottom like traditional matrices
+    z = cm[::-1]
+    x = ['Non-Diabetes', 'Diabetes']
+    y = ['Diabetes', 'Non-Diabetes']
     
-    sns.heatmap(
-        cm, 
-        annot=True, 
-        fmt='d', 
-        cmap='Blues', 
-        cbar=False,
-        xticklabels=['Non-Diabetes', 'Diabetes'],
-        yticklabels=['Non-Diabetes', 'Diabetes'],
-        ax=ax
+    fig = go.Figure(data=go.Heatmap(
+        z=z,
+        x=x,
+        y=y,
+        colorscale='Blues',
+        showscale=False,
+        text=z,
+        texttemplate="%{text}",
+        textfont={"size": 16},
+        hoverinfo="skip"
+    ))
+    
+    fig.update_layout(
+        title=f"<b>{model_name}</b><br>Confusion Matrix",
+        xaxis_title="<b>Predicted</b>",
+        yaxis_title="<b>Actual</b>",
+        height=350,
+        margin=dict(l=20, r=20, t=60, b=20),
+        template="plotly_white"
     )
     
-    ax.set_title(f"{model_name} - Confusion Matrix", fontsize=14, fontweight='bold')
-    ax.set_ylabel('Actual', fontsize=12, fontweight='bold')
-    ax.set_xlabel('Predicted', fontsize=12, fontweight='bold')
-    
-    plt.tight_layout()
     return fig
- 
+
 def create_error_analysis(results_df):
     """Create error analysis visualization"""
     if results_df is None:
@@ -208,7 +218,7 @@ def create_error_analysis(results_df):
     )
     
     return fig
- 
+
 def create_best_model_analysis(results_df):
     """Identify and analyze the best model"""
     if results_df is None:
@@ -225,11 +235,11 @@ def create_best_model_analysis(results_df):
     best_model = results_df.iloc[best_idx]
     
     return best_model, results_df
- 
+
 # =====================================================
 # MODEL INSIGHTS PAGE
 # =====================================================
- 
+
 def model_insights_page():
     """Display comprehensive model insights"""
     
@@ -345,7 +355,8 @@ def model_insights_page():
         for col, (model_name, cm) in zip(cols, matrices.items()):
             with col:
                 fig = plot_confusion_matrix(cm, model_name)
-                st.pyplot(fig, use_container_width=True)
+                # Note: Switched to plotly_chart
+                st.plotly_chart(fig, use_container_width=True)
                 
                 # Calculate rates
                 tn, fp, fn, tp = cm.ravel()
@@ -402,11 +413,11 @@ def model_insights_page():
                     <b>{row['Model']}</b> - Score: {row['score']:.4f}
                 </div>
                 """, unsafe_allow_html=True)
- 
+
 # =====================================================
-# HOME PAGE (Your existing code)
+# HOME PAGE
 # =====================================================
- 
+
 def home_page():
     """Home page"""
     st.markdown(
@@ -427,28 +438,28 @@ def home_page():
     - 📊 **History Tracking**: View your prediction history
     - 📈 **Model Insights**: Understand how the model works
     """)
- 
+
 # =====================================================
 # MAIN APP NAVIGATION
 # =====================================================
- 
+
 # Create tabs
 tab_home, tab_prediction, tab_insights = st.tabs([
     "🏠 Home",
     "🩺 Diabetes Prediction",
     "📈 Model Insights"
 ])
- 
+
 with tab_home:
     home_page()
- 
+
 with tab_prediction:
     st.markdown("<h1 class='main-title'>🩺 Diabetes Prediction</h1>", unsafe_allow_html=True)
     st.info("Your diabetes prediction form would go here...")
- 
+
 with tab_insights:
     model_insights_page()
- 
+
 # =====================================================
 # Footer
 # =====================================================
