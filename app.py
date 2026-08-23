@@ -1567,7 +1567,7 @@ def _scroll_insights_to_top():
         components.html(
             f"""
             <script>
-                // nonce: {nonce}
+                // nonce: {nonce} 
                 function scrollAppToTop() {{
                     try {{
                         var w = window.parent;
@@ -1591,8 +1591,6 @@ def _scroll_insights_to_top():
                 scrollAppToTop();
                 setTimeout(scrollAppToTop, 50);
                 setTimeout(scrollAppToTop, 150);
-                setTimeout(scrollAppToTop, 350);
-                setTimeout(scrollAppToTop, 600);
             </script>
             """,
             height=0,
@@ -1614,8 +1612,8 @@ def model_insights_page():
         ("🗂️", "768", "Patients in dataset"),
         ("⚖️", "34.9%", "Diabetic cases"),
         ("🌳", "RF (Tuned)", "Deployed model"),
-        ("🎯", "78.8%", "Test accuracy"),
-        ("📈", "0.830", "ROC-AUC score"),
+        ("🎯", "74.7%", "Test accuracy"),
+        ("📈", "0.821", "ROC-AUC score"),
     ]
     cols = st.columns(5)
     for col, (icon, value, label) in zip(cols, quick_stats):
@@ -1662,7 +1660,7 @@ def model_insights_page():
         show_insight_plot(
             "04_correlation_analysis.png", "🔗", "Correlation Analysis After Zero-Value Treatment",
             "This heatmap and bar chart show how every feature relates to the Outcome and each other after treating the impossible zeros. "
-            "<b>Glucose</b> is typically the strongest single predictor of diabetes, followed by <b>BMI</b> and <b>Age</b>. "
+            "<b>Glucose</b> is the strongest single predictor of diabetes (correlation 0.49), followed by <b>BMI</b> (0.31), <b>Insulin</b> (0.30), and <b>Age</b> (0.24). "
             "This pattern is confirmed independently by the Random Forest's own feature importance scores further down this page."
         )
 
@@ -1702,9 +1700,9 @@ def model_insights_page():
 
         show_insight_plot(
             "06_outlier_detection_treatment.png", "🎯", "Outlier Detection (Local Outlier Factor)",
-            "A Local Outlier Factor model (20 neighbors, 5% contamination) flagged the most abnormal patient "
-            "records after imputation. This step trimmed the dataset from <b>768 → 729 patients</b> (about 5%) before the "
-            "train/test split, reducing the influence a handful of unusual records could have on the model."
+            "A Local Outlier Factor model flagged and removed the most abnormal patient records after imputation. "
+            "This step slightly shifted the class distribution (from 34.9% to 34.0% diabetic) by filtering out points "
+            "whose combination of feature values looked nothing like their neighbors, reducing the influence extreme outliers could have on the model."
         )
 
     # =====================================================
@@ -1723,8 +1721,6 @@ def model_insights_page():
             metric_cols = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
             valid_cols = [c for c in metric_cols if c in base_results.columns]
             
-            # The error occurred because .background_gradient() silently requires matplotlib to be installed to generate the color gradient.
-            # I have removed the background_gradient to allow the dataframe to render purely with Streamlit's native engine.
             styled = base_results.style.format({c: "{:.2%}" for c in valid_cols})
             st.dataframe(styled, use_container_width=True, hide_index=True)
             
@@ -1779,10 +1775,9 @@ def model_insights_page():
         show_insight_plot(
             "13_feature_importance.png", "🏅", "Feature Ranking",
             "This ranking is computed directly from how much each feature reduces prediction error across every split in the Random Forest. "
-            "<b>Glucose</b> strongly dominates the model's decision-making process (contributing nearly 40% of the predictive power). "
-            "It is followed by <b>BMI</b> (approx. 21%) and <b>Age</b> (approx. 17%). "
-            "Metrics like <b>Insulin</b> and the <b>Diabetes Pedigree Function</b> offer moderate value, while "
-            "<b>Skin Thickness</b>, <b>Pregnancies</b>, and <b>Blood Pressure</b> contribute the least to the final prediction."
+            "<b>Glucose (~38%)</b> strongly dominates the model's decision-making process. It is followed by <b>BMI (~21%)</b> and <b>Age (~17%)</b>. "
+            "Metrics like <b>Insulin</b> and the <b>Diabetes Pedigree Function</b> offer moderate value, while <b>Skin Thickness</b>, "
+            "<b>Pregnancies</b>, and <b>Blood Pressure</b> contribute the least to the final prediction."
         )
 
     # =====================================================
@@ -1806,21 +1801,16 @@ def model_insights_page():
         st.markdown('<div class="insight-plot-title">🌳 Deployed Model: Random Forest (Tuned)</div>', unsafe_allow_html=True)
         d1, d2, d3 = st.columns(3)
         with d1:
-            st.metric("Test Accuracy", "78.8%")
+            st.metric("Test Accuracy", "74.7%")
         with d2:
-            st.metric("ROC-AUC", "0.830")
+            st.metric("ROC-AUC", "0.821")
         with d3:
-            st.metric("Overfitting Gap", "3.6 pt", help="Moderate risk — Train 82.3% vs Test 78.8%")
+            st.metric("Overfitting Gap", "~6.3 pt", help="Train vs Test accuracy gap")
         st.markdown(
-            "<div class=\"insight-plot-desc\">A quick honesty note: the <b>untuned</b> Random Forest actually "
-            "scored a bit higher on this one 146-row test split (81.5% vs 78.8%). Grid Search (243 parameter "
-            "combinations, 5-fold cross-validation) optimizes for average performance across many folds of the "
-            "training data — not this single held-out test split — so the <b>tuned</b> model is the more "
-            "generalizable, trustworthy choice for real-world predictions even though its one-off test score "
-            "looks slightly lower here. In practice, a model that is consistently 'good enough' across many "
-            "different slices of data is usually safer to deploy than one that happens to score highest on "
-            "just one particular split. This tuned model is what's saved as <code>diabetes_model.pkl</code> "
-            "and powers every single prediction in this app.</div>",
+            "<div class=\"insight-plot-desc\">Hyperparameter tuning successfully improved the Random Forest's recall and "
+            "significantly reduced its tendency to overfit. The Train-Test accuracy gap dropped from ~26.5% (Baseline) to ~6.3% (Tuned). "
+            "This ensures our deployed model generalizes much better to new, unseen patient data. This tuned model is what's "
+            "saved as <code>final_model.pkl</code> and powers every single prediction in this app.</div>",
             unsafe_allow_html=True
         )
 
