@@ -1,2540 +1,461 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
-import joblib
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import plotly.graph_objects as go
+import plotly.express as px
+from sklearn.metrics import confusion_matrix
+import pickle
 import os
-import io
-from datetime import datetime
-import json
-import uuid
-from pathlib import Path
-
+ 
 # =====================================================
-# Page Configuration
+# PAGE CONFIG & STYLING
 # =====================================================
 st.set_page_config(
     page_title="Diabetes Prediction System",
     page_icon="🩺",
     layout="wide"
 )
-
-# =====================================================
-# Load Model with Error Handling
-# =====================================================
-@st.cache_resource
-def load_model():
-    try:
-        with open("final_model.pkl", "rb") as f:
-            model = joblib.load(f)
-        
-        with open("median_imputer.pkl", "rb") as f:
-            medians = joblib.load(f)
-        
-        # Handle different imputer formats
-        if isinstance(medians, dict):
-            median_dict = medians
-        else:
-            # If it's a SimpleImputer object
-            try:
-                columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
-                median_dict = dict(zip(columns, medians.statistics_))
-            except:
-                median_dict = {}
-        
-        return model, median_dict
-    except FileNotFoundError as e:
-        st.error(f"Model file not found: {e}")
-        st.stop()
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()
-
-model, medians = load_model()
-
-# =====================================================
-# Custom CSS
-# =====================================================
+ 
+# Your existing CSS styling
 st.markdown("""
 <style>
-.stApp {
-    background: #f5f7fa;
-}
-
-footer {
-    visibility: hidden;
-}
-
-header {
-    visibility: hidden;
-}
-
-/* Tabs */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 30px;
-}
-
-.stTabs [data-baseweb="tab"] {
-    font-size: 18px;
-    font-weight: bold;
-    color: #1a237e;
-}
-
-/* Main Title */
 .main-title {
     text-align: center;
     color: #1A237E;
     font-size: 48px;
     font-weight: 800;
 }
-
+ 
 .sub-title {
     text-align: center;
     font-size: 20px;
     color: #555;
     margin-bottom: 40px;
 }
-
-.card {
-    background: white;
-    padding: 25px;
-    border-radius: 18px;
-    box-shadow: 0px 5px 20px rgba(0,0,0,.08);
-}
-
+ 
 .section {
     font-size: 30px;
     font-weight: 700;
     margin-bottom: 15px;
 }
-
-.info {
-    background: #dbeafe;
-    padding: 18px;
-    border-radius: 12px;
-    color: #0f172a;
-    font-size: 17px;
-}
-
-/* Normal Button Styles */
-div.stButton > button {
-    width: 100%;
-    background: #f0f2f6;
-    color: #1a1a1a;
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-    height: 50px;
-    font-size: 16px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-div.stButton > button:hover {
-    background: #e4e7ec;
-    border-color: #b0b5bd;
-    color: #1a1a1a;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-div.stButton > button:active {
-    transform: translateY(0px);
-}
-
-/* Form Button */
-div.stForm button {
-    background: #f0f2f6;
-    color: #1a1a1a;
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
-    height: 50px;
-    font-size: 16px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-div.stForm button:hover {
-    background: #e4e7ec;
-    border-color: #b0b5bd;
-    color: #1a1a1a;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-/* ============================================= */
-/* BMI Calculator - Bigger Inputs */
-/* ============================================= */
-.bmi-input-container {
-    background: transparent;
-    border-radius: 16px;
-    padding: 0px;
-    box-shadow: none;
-    margin-bottom: 20px;
-}
-
-.bmi-input-container .stNumberInput {
-    width: 100%;
-}
-
-.bmi-input-container .stNumberInput input {
-    font-size: 24px !important;
-    padding: 20px 15px !important;
-    height: 70px !important;
-    border-radius: 12px !important;
-    border: 2px solid #e0e0e0 !important;
-    transition: all 0.3s ease;
-}
-
-.bmi-input-container .stNumberInput input:focus {
-    border-color: #1A237E !important;
-    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1) !important;
-}
-
-.bmi-input-container .stNumberInput label {
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    color: #333 !important;
-    margin-bottom: 8px !important;
-}
-
-.bmi-calculate-btn {
-    margin-top: 20px;
-}
-
-.bmi-calculate-btn button {
-    width: 100% !important;
-    height: 60px !important;
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    background: #1A237E !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 12px !important;
-    transition: all 0.3s ease !important;
-}
-
-.bmi-calculate-btn button:hover {
-    background: #283593 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 15px rgba(26, 35, 126, 0.3) !important;
-}
-
-.bmi-calculate-btn button:active {
-    transform: translateY(0px) !important;
-}
-
-/* ============================================= */
-/* Slider Styling - Dark Blue */
-/* ============================================= */
-div[data-baseweb="slider"] {
-    margin-top: 5px;
-}
-
-div[data-baseweb="slider"] div[role="slider"] {
-    background: #1A237E !important;
-    width: 18px !important;
-    height: 18px !important;
-    border: 2px solid white !important;
-    box-shadow: 0 2px 6px rgba(26, 35, 126, 0.3) !important;
-}
-
-div[data-baseweb="slider"] div[data-testid="stSliderTrack"] {
-    background: #e0e0e0 !important;
-    height: 6px !important;
-    border-radius: 3px !important;
-}
-
-div[data-baseweb="slider"] div[data-testid="stSliderTrack"] > div {
-    background: #1A237E !important;
-}
-
-/* ============================================= */
-/* Number Input - No Box Around +/- Buttons */
-/* ============================================= */
-div[data-testid="stNumberInput"] {
-    position: relative;
-}
-
-div[data-testid="stNumberInput"] button {
-    background: transparent !important;
-    color: #1A237E !important;
-    border: none !important;
-    border-radius: 4px !important;
-    padding: 4px 8px !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    min-width: 30px !important;
-    min-height: 30px !important;
-    box-shadow: none !important;
-    transition: all 0.2s ease;
-}
-
-div[data-testid="stNumberInput"] button:hover {
-    background: rgba(26, 35, 126, 0.08) !important;
-    color: #1A237E !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-div[data-testid="stNumberInput"] button:active {
-    background: rgba(26, 35, 126, 0.15) !important;
-    transform: scale(0.95);
-}
-
-div[data-testid="stNumberInput"] button:focus {
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-
-div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-    border: 2px solid #d0d5dd !important;
-    border-radius: 8px !important;
-    background: white !important;
-}
-
-div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
-    border-color: #1A237E !important;
-    box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.1) !important;
-}
-
-/* ============================================= */
-/* BMI Result Styles */
-/* ============================================= */
-.bmi-result-box {
-    background: white;
-    border-radius: 16px;
-    padding: 30px;
-    text-align: center;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-}
-
-.bmi-value-large {
-    font-size: 56px;
+ 
+.insight-section-header {
+    font-size: 32px;
     font-weight: 800;
-    color: #1a1a1a;
-    line-height: 1;
-    margin: 10px 0 5px 0;
+    color: #1A237E;
+    margin: 10px 0 8px 0;
 }
-
-.bmi-category {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-
-.bmi-message {
-    font-size: 16px;
+ 
+.insight-section-sub {
     color: #555;
+    font-size: 17px;
+    line-height: 1.9;
+    margin-bottom: 24px;
 }
-
-.bmi-scale-container {
+ 
+.insight-stat-card {
     background: white;
     border-radius: 16px;
-    padding: 25px 30px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    margin: 20px 0;
-}
-
-.bmi-scale-bar {
-    position: relative;
-    height: 30px;
-    border-radius: 15px;
-    background: linear-gradient(to right, #4fc3f7, #81c784, #fff176, #ff8a65, #ef5350);
-    margin: 20px 0 30px 0;
-    overflow: visible;
-}
-
-.bmi-marker {
-    position: absolute;
-    top: -12px;
-    transform: translateX(-50%);
-    width: 28px;
-    height: 28px;
-    background: #1a237e;
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    z-index: 10;
-    transition: left 0.5s ease;
-}
-
-.bmi-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: #555;
-    padding: 0 5px;
-    margin-top: 5px;
-}
-
-.bmi-labels span {
+    padding: 20px 12px;
     text-align: center;
-    flex: 1;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border-top: 5px solid #1A237E;
 }
-
-.bmi-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin: 20px 0;
-}
-
-.bmi-info-item {
-    background: white;
-    padding: 18px 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border-left: 4px solid #1a237e;
-}
-
-.bmi-info-item .label {
-    font-size: 13px;
-    color: #888;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.bmi-info-item .value {
-    font-size: 20px;
-    font-weight: 700;
-    color: #1a1a1a;
-    margin-top: 4px;
-}
-
-.bmi-category-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 15px;
-    border-radius: 8px;
-    margin: 5px 0;
-    font-size: 14px;
-}
-
-.bmi-category-item .range {
-    color: #666;
-    font-size: 13px;
-}
-
-.bmi-category-item.active {
-    background: #e8eaf6;
-    font-weight: 600;
-    border-left: 4px solid #1a237e;
-}
-
-.bmi-category-item.underweight { border-left: 4px solid #4fc3f7; }
-.bmi-category-item.normal { border-left: 4px solid #81c784; }
-.bmi-category-item.overweight { border-left: 4px solid #fff176; }
-.bmi-category-item.obese { border-left: 4px solid #ef5350; }
-
-.bmi-note {
-    background: #f8f9fa;
-    padding: 15px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    color: #666;
-    margin-top: 20px;
-    border-left: 4px solid #1a237e;
-}
-
-/* File Uploader */
-div[data-testid="stFileUploader"] button {
-    background: #f0f2f6 !important;
-    color: #1a1a1a !important;
-    border: 1px solid #d0d5dd !important;
-    border-radius: 8px !important;
-}
-
-div[data-testid="stFileUploader"] button:hover {
-    background: #e4e7ec !important;
-    border-color: #b0b5bd !important;
-}
-
-/* Download Button */
-div[data-testid="stDownloadButton"] button {
-    background: #f0f2f6 !important;
-    color: #1a1a1a !important;
-    border: 1px solid #d0d5dd !important;
-    border-radius: 8px !important;
-}
-
-div[data-testid="stDownloadButton"] button:hover {
-    background: #e4e7ec !important;
-    border-color: #b0b5bd !important;
-}
-
-/* Home Page Styles */
-.feature-card {
-    background: white;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    text-align: center;
-    transition: all 0.3s ease;
-    height: 100%;
-}
-
-.feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-}
-
-.feature-icon {
-    font-size: 48px;
-    margin-bottom: 15px;
-}
-
-.feature-title {
-    font-size: 20px;
+ 
+.insight-plot-title {
+    font-size: 22px;
     font-weight: 700;
     color: #1A237E;
-    margin-bottom: 10px;
+    margin: 28px 0 14px 0;
 }
-
-.feature-desc {
-    color: #666;
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-/* History Page Styles */
-.history-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border-left: 4px solid #1A237E;
-}
-
-.history-date {
-    font-size: 12px;
-    color: #888;
-}
-
-.history-result {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-/* Error Box */
-.error-box {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 12px;
-    padding: 20px;
-    margin: 15px 0;
-}
-
-.error-box .error-title {
-    color: #dc2626;
-    font-weight: 700;
-    font-size: 18px;
-    margin-bottom: 10px;
-}
-
-.error-box .error-message {
-    color: #991b1b;
-    margin-bottom: 15px;
-    white-space: pre-line;
-}
-
-.error-box .error-solution {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 10px;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .bmi-info-grid {
-        grid-template-columns: 1fr;
-    }
-    .bmi-value-large {
-        font-size: 40px;
-    }
-    .bmi-input-container .stNumberInput input {
-        font-size: 18px !important;
-        height: 55px !important;
-        padding: 15px !important;
-    }
+ 
+.insight-plot-desc {
+    font-size: 17px;
+    color: #555;
+    line-height: 1.9;
+    margin: 14px 0 8px 0;
 }
 </style>
 """, unsafe_allow_html=True)
-
+ 
 # =====================================================
-# Helper Functions
+# HELPER FUNCTIONS FOR MODEL INSIGHTS
 # =====================================================
-def validate_required_fields(glucose, blood_pressure, bmi, age, dpf, skin, insulin, pregnancies):
-    """Validate required fields for prediction"""
-    errors = []
-    
-    if pregnancies < 0 or pregnancies > 20:
-        errors.append("Pregnancies must be between 0 and 20.")
-    
-    if glucose <= 0 or glucose > 300:  # Reject 0
-        errors.append("Glucose must be between 1 and 300 mg/dL.")
-    
-    if blood_pressure <= 0 or blood_pressure > 200:  # Reject 0
-        errors.append("Blood Pressure must be between 1 and 200 mmHg.")
-    
-    if skin <= 0 or skin > 99:  # Reject 0
-        errors.append("Skin Thickness must be between 1 and 99 mm.")
-    
-    if insulin < 0 or insulin > 900:
-        errors.append("Insulin must be between 0 and 900 mu U/ml.")
-    
-    if bmi <= 0 or bmi > 100:
-        errors.append("BMI must be between 0.1 and 100 kg/m².")
-    
-    if age < 1 or age > 120:
-        errors.append("Age must be between 1 and 120 years.")
-    
-    if dpf <= 0 or dpf > 3:
-        errors.append("Diabetes Pedigree Function must be between 0.01 and 3.0.")
-    
-    return errors
-
-def replace_zero_values(df, columns):
-    """Replace zero values with median values (for manual input only)"""
-    for col in columns:
-        if col in df.columns:
-            df[col] = df[col].replace(0, medians.get(col, 0))
-    return df
-
-def create_gauge_chart(diabetes_prob):
-    """Create a gauge chart for diabetes risk"""
-    if diabetes_prob is None:
+ 
+def load_model_data(model_path="final_model.pkl", results_path="model_comparison_results.csv"):
+    """Load model and results data"""
+    try:
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+        
+        if os.path.exists(results_path):
+            results_df = pd.read_csv(results_path)
+        else:
+            results_df = None
+        
+        return model, results_df
+    except Exception as e:
+        st.error(f"Error loading model data: {e}")
+        return None, None
+ 
+def create_model_comparison_chart(results_df):
+    """Create interactive model comparison bar chart"""
+    if results_df is None:
         return None
     
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=diabetes_prob,
-            number={"suffix": "%"},
-            title={"text": "Diabetes Risk"},
-            gauge={
-                "axis": {"range": [0, 100]},
-                "bar": {"color": "#1A237E"},
-                "steps": [
-                    {"range": [0, 20], "color": "#4CAF50"},
-                    {"range": [20, 40], "color": "#8BC34A"},
-                    {"range": [40, 60], "color": "#FFC107"},
-                    {"range": [60, 80], "color": "#FF9800"},
-                    {"range": [80, 100], "color": "#F44336"}
-                ],
-                "threshold": {
-                    "line": {"color": "red", "width": 4},
-                    "thickness": 0.8,
-                    "value": diabetes_prob
-                }
-            }
-        )
-    )
+    metrics = ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
+    
+    fig = go.Figure()
+    
+    for model in results_df["Model"]:
+        values = results_df[results_df["Model"] == model][metrics].values[0]
+        fig.add_trace(go.Bar(
+            name=model,
+            x=metrics,
+            y=values,
+            text=[f"{v:.3f}" for v in values],
+            textposition="outside",
+        ))
     
     fig.update_layout(
-        height=420,
-        margin=dict(l=20, r=20, t=50, b=20)
+        title="Model Performance Comparison",
+        barmode="group",
+        height=450,
+        yaxis=dict(range=[0, 1.05]),
+        template="plotly_white",
     )
     
     return fig
-
-def display_recommendation(prediction):
-    """Display health recommendations based on prediction"""
-    if prediction == 1:
-        st.warning("""
-        ### ⚠️ High Risk Detected
+ 
+def create_confusion_matrices(results_df):
+    """Create confusion matrix visualizations"""
+    if results_df is None:
+        return None
+    
+    matrices = {}
+    for _, row in results_df.iterrows():
+        model_name = row["Model"]
+        tn = row["True Negative"]
+        fp = row["False Positive"]
+        fn = row["False Negative"]
+        tp = row["True Positive"]
         
-        The machine learning model predicts an elevated likelihood of diabetes.
-        
-        ### 📋 Recommended Actions
-        - Consult a healthcare professional immediately
-        - Schedule comprehensive laboratory testing
-        - Monitor blood glucose regularly
-        - Follow a balanced, low-sugar diet
-        - Exercise for at least 30 minutes daily
-        - Maintain a healthy weight
-        - Attend regular medical checkups
-        """)
-    else:
-        st.success("""
-        ### ✅ Low Risk Detected
-        
-        The model predicts a lower likelihood of diabetes.
-        
-        ### 📋 Recommended Actions
-        - Continue a balanced and nutritious diet
-        - Exercise regularly (30+ minutes/day)
-        - Stay hydrated
-        - Maintain a healthy weight
-        - Get annual health checkups
-        - Practice healthy lifestyle habits
-        """)
-
-def add_to_history(patient_data, prediction, diabetes_prob):
-    """Add prediction to history"""
-    if "history" not in st.session_state:
-        st.session_state.history = []
+        cm = np.array([[tn, fp], [fn, tp]])
+        matrices[model_name] = cm
     
-    # Convert patient_data to dict if it's a DataFrame
-    if isinstance(patient_data, pd.DataFrame):
-        patient_dict = patient_data.to_dict('records')[0] if not patient_data.empty else {}
-    else:
-        patient_dict = patient_data
+    return matrices
+ 
+def plot_confusion_matrix(cm, model_name):
+    """Plot single confusion matrix"""
+    fig, ax = plt.subplots(figsize=(6, 5))
     
-    history_entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "patient_data": patient_dict,
-        "prediction": int(prediction),
-        "diabetes_probability": round(diabetes_prob, 2) if diabetes_prob is not None else None,
-        "risk_level": get_risk_level(diabetes_prob) if diabetes_prob is not None else "Unknown"
-    }
+    sns.heatmap(
+        cm, 
+        annot=True, 
+        fmt='d', 
+        cmap='Blues', 
+        cbar=False,
+        xticklabels=['Non-Diabetes', 'Diabetes'],
+        yticklabels=['Non-Diabetes', 'Diabetes'],
+        ax=ax
+    )
     
-    st.session_state.history.insert(0, history_entry)
+    ax.set_title(f"{model_name} - Confusion Matrix", fontsize=14, fontweight='bold')
+    ax.set_ylabel('Actual', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Predicted', fontsize=12, fontweight='bold')
     
-    # Keep only last 100 entries
-    if len(st.session_state.history) > 100:
-        st.session_state.history = st.session_state.history[:100]
+    plt.tight_layout()
+    return fig
+ 
+def create_error_analysis(results_df):
+    """Create error analysis visualization"""
+    if results_df is None:
+        return None
     
-    # Save to CSV for persistence
-    save_history_to_csv()
-
-def save_history_to_csv():
-    """Save history to CSV file for persistence"""
-    try:
-        if "history" in st.session_state and st.session_state.history:
-            export_data = []
-            for entry in st.session_state.history:
-                row = {
-                    "Timestamp": entry["timestamp"],
-                    "Prediction": "Diabetes" if entry["prediction"] == 1 else "No Diabetes",
-                    "Diabetes_Probability": entry.get("diabetes_probability", 0),
-                    "Risk_Level": entry.get("risk_level", "Unknown")
-                }
-                patient_data = entry.get("patient_data", {})
-                for key, value in patient_data.items():
-                    row[key] = value
-                export_data.append(row)
-            
-            df_export = pd.DataFrame(export_data)
-            df_export.to_csv("history.csv", index=False)
-    except:
-        pass
-
-def load_history_from_csv():
-    """Load history from CSV file"""
-    try:
-        if Path("history.csv").exists():
-            df = pd.read_csv("history.csv")
-            history = []
-            for _, row in df.iterrows():
-                entry = {
-                    "timestamp": row["Timestamp"],
-                    "prediction": 1 if row["Prediction"] == "Diabetes" else 0,
-                    "diabetes_probability": row["Diabetes_Probability"],
-                    "risk_level": row["Risk_Level"],
-                    "patient_data": {}
-                }
-                exclude_cols = ["Timestamp", "Prediction", "Diabetes_Probability", "Risk_Level"]
-                for col in df.columns:
-                    if col not in exclude_cols:
-                        entry["patient_data"][col] = row[col]
-                history.append(entry)
-            return history
-    except:
-        pass
-    return []
-
-def get_risk_level(diabetes_prob):
-    """Get risk level based on probability"""
-    if diabetes_prob is None:
-        return "Unknown"
-    if diabetes_prob < 20:
-        return "Low"
-    elif diabetes_prob < 40:
-        return "Mild"
-    elif diabetes_prob < 60:
-        return "Moderate"
-    elif diabetes_prob < 80:
-        return "High"
-    else:
-        return "Very High"
-
-def get_risk_color(risk_level):
-    """Get color for risk level"""
-    colors = {
-        "Low": "#4CAF50",
-        "Mild": "#8BC34A",
-        "Moderate": "#FFC107",
-        "High": "#FF9800",
-        "Very High": "#F44336",
-        "Unknown": "#666"
-    }
-    return colors.get(risk_level, "#666")
-
-def validate_uploaded_data(df):
-    """Validate uploaded data - strict: no zero values allowed"""
-    errors = []
+    errors_data = []
+    for _, row in results_df.iterrows():
+        errors_data.append({
+            "Model": row["Model"],
+            "False Negatives": row["False Negative"],
+            "False Positives": row["False Positive"],
+        })
     
-    # Check for required columns
-    required_columns = [
-        "Pregnancies", "Glucose", "BloodPressure", 
-        "SkinThickness", "Insulin", "BMI", 
-        "DiabetesPedigreeFunction", "Age"
-    ]
+    errors_df = pd.DataFrame(errors_data)
     
-    missing_cols = [col for col in required_columns if col not in df.columns]
-    if missing_cols:
-        errors.append(f"Missing columns: {', '.join(missing_cols)}")
-        return errors
+    fig = go.Figure()
     
-    # Check for empty dataframe
-    if df.empty:
-        errors.append("The uploaded file is empty.")
-        return errors
+    fig.add_trace(go.Bar(
+        name="False Negatives",
+        x=errors_df["Model"],
+        y=errors_df["False Negatives"],
+        marker=dict(color="#ef5350"),
+    ))
     
-    # Validate each column - STRICT: No zeros allowed for critical values
-    # Pregnancies: 0-20 (0 is allowed — a patient can genuinely have had none)
-    invalid_preg = df[(df['Pregnancies'] < 0) | (df['Pregnancies'] > 20)]
-    if not invalid_preg.empty:
-        errors.append(f"⚠️ Pregnancies must be between 0 and 20. Found {len(invalid_preg)} invalid rows.")
+    fig.add_trace(go.Bar(
+        name="False Positives",
+        x=errors_df["Model"],
+        y=errors_df["False Positives"],
+        marker=dict(color="#ffa726"),
+    ))
     
-    # Glucose: 1-300 (0 is NOT allowed)
-    invalid_glucose = df[(df['Glucose'] <= 0) | (df['Glucose'] > 300)]
-    if not invalid_glucose.empty:
-        errors.append(f"⚠️ Glucose must be between 1 and 300 mg/dL. Found {len(invalid_glucose)} invalid rows with 0 or negative values.")
+    fig.update_layout(
+        title="Error Analysis",
+        barmode="group",
+        height=450,
+        template="plotly_white",
+    )
     
-    # BloodPressure: 1-200 (0 is NOT allowed)
-    invalid_bp = df[(df['BloodPressure'] <= 0) | (df['BloodPressure'] > 200)]
-    if not invalid_bp.empty:
-        errors.append(f"⚠️ Blood Pressure must be between 1 and 200 mmHg. Found {len(invalid_bp)} invalid rows with 0 or negative values.")
+    return fig
+ 
+def create_best_model_analysis(results_df):
+    """Identify and analyze the best model"""
+    if results_df is None:
+        return None, None
     
-    # SkinThickness: 1-99 (0 is NOT allowed)
-    invalid_skin = df[(df['SkinThickness'] <= 0) | (df['SkinThickness'] > 99)]
-    if not invalid_skin.empty:
-        errors.append(f"⚠️ Skin Thickness must be between 1 and 99 mm. Found {len(invalid_skin)} invalid rows with 0 or negative values.")
+    results_df["score"] = (
+        results_df["Accuracy"] * 0.25 +
+        results_df["Precision"] * 0.25 +
+        results_df["Recall"] * 0.25 +
+        results_df["ROC-AUC"] * 0.25
+    )
     
-    # Insulin: 1-900 (0 is NOT allowed — treated as missing, same as Glucose/BP/Skin/BMI)
-    invalid_insulin = df[(df['Insulin'] <= 0) | (df['Insulin'] > 900)]
-    if not invalid_insulin.empty:
-        errors.append(f"⚠️ Insulin must be between 1 and 900 mu U/ml. Found {len(invalid_insulin)} invalid rows with 0 or negative values.")
+    best_idx = results_df["score"].idxmax()
+    best_model = results_df.iloc[best_idx]
     
-    # BMI: 0.1-100
-    invalid_bmi = df[(df['BMI'] <= 0) | (df['BMI'] > 100)]
-    if not invalid_bmi.empty:
-        errors.append(f"⚠️ BMI must be between 0.1 and 100 kg/m². Found {len(invalid_bmi)} invalid rows with 0 or negative values.")
-    
-    # DiabetesPedigreeFunction: 0.01-3.0
-    invalid_dpf = df[(df['DiabetesPedigreeFunction'] <= 0) | (df['DiabetesPedigreeFunction'] > 3)]
-    if not invalid_dpf.empty:
-        errors.append(f"⚠️ Diabetes Pedigree Function must be between 0.01 and 3.0. Found {len(invalid_dpf)} invalid rows with 0 or negative values.")
-    
-    # Age: 1-120
-    invalid_age = df[(df['Age'] < 1) | (df['Age'] > 120)]
-    if not invalid_age.empty:
-        errors.append(f"⚠️ Age must be between 1 and 120 years. Found {len(invalid_age)} invalid rows with 0 or negative values.")
-    
-    # Check for null values
-    null_counts = df[required_columns].isnull().sum()
-    null_cols = null_counts[null_counts > 0]
-    if not null_cols.empty:
-        null_messages = [f"{col}: {count} null values" for col, count in null_cols.items()]
-        errors.append(f"⚠️ Null values found: {', '.join(null_messages)}")
-    
-    return errors
-
-def predict_patient_manual(patient_data):
-    """Make prediction for manual input with zero replacement.
-
-    NOTE: The RandomForestClassifier in diabetes_model.pkl was trained on
-    RAW (unscaled) feature values -- tree splits use thresholds on the
-    original scale (e.g. Glucose > 154.5), not standardized values. Do NOT
-    apply StandardScaler here; doing so compresses every input into a
-    narrow range the model's thresholds were never trained against, which
-    silently collapses nearly all predictions into "No Diabetes".
-    """
-    try:
-        # Replace zero values with medians (for manual input)
-        zero_columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
-        patient_processed = replace_zero_values(patient_data.copy(), zero_columns)
-        
-        # Feed raw (unscaled) values directly -- matches training
-        prediction = model.predict(patient_processed)[0]
-        
-        # Get probability if available
-        if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(patient_processed)[0]
-            diabetes_prob = probability[1] * 100
-            healthy_prob = probability[0] * 100
-        else:
-            diabetes_prob = None
-            healthy_prob = None
-        
-        return prediction, diabetes_prob, healthy_prob, patient_processed
-    
-    except Exception as e:
-        st.error(f"Error making prediction: {e}")
-        return None, None, None, None
-
-def predict_patient_upload(patient_data):
-    """Make prediction for upload data - NO zero replacement.
-
-    NOTE: See predict_patient_manual -- the model expects raw, unscaled
-    values. Scaling here would reintroduce the model/scaler mismatch.
-    """
-    try:
-        # Feed raw (unscaled) values directly -- matches training
-        patient_values = patient_data.values if hasattr(patient_data, "values") else patient_data
-        prediction = model.predict(patient_values)[0]
-        
-        # Get probability if available
-        if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(patient_values)[0]
-            diabetes_prob = probability[1] * 100
-            healthy_prob = probability[0] * 100
-        else:
-            diabetes_prob = None
-            healthy_prob = None
-        
-        # Flatten raw values for debug display
-        raw_values = list(patient_values[0]) if hasattr(patient_values, "__getitem__") else None
-        
-        return prediction, diabetes_prob, healthy_prob, raw_values
-    
-    except Exception as e:
-        st.error(f"Error making prediction: {e}")
-        return None, None, None, None
-
+    return best_model, results_df
+ 
 # =====================================================
-# BMI Calculator Component
+# MODEL INSIGHTS PAGE
 # =====================================================
-def bmi_calculator():
-    """BMI Calculator with bigger inputs and full-width layout"""
+ 
+def model_insights_page():
+    """Display comprehensive model insights"""
     
-    st.markdown("<h1 style='text-align: center; color: #1A237E;'>⚖️ BMI Calculator</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #555; margin-bottom: 30px;'>Calculate your Body Mass Index and assess your health status</p>", unsafe_allow_html=True)
+    st.markdown(
+        "<h1 style='text-align: center; color: #1A237E;'>"
+        "📈 Model Insights & Performance</h1>",
+        unsafe_allow_html=True
+    )
     
-    # Input Container - Full Width with bigger inputs (removed white box)
-    st.markdown('<div class="bmi-input-container">', unsafe_allow_html=True)
+    st.markdown(
+        "<p style='text-align: center; color: #666; font-size: 18px;'>"
+        "Behind-the-scenes analysis of model training and evaluation</p>",
+        unsafe_allow_html=True
+    )
     
-    # Weight and Height in two columns
-    col1, col2 = st.columns(2)
+    # Load data
+    model, results_df = load_model_data()
     
-    with col1:
-        weight = st.number_input(
-            "Weight (kg)",
-            min_value=20.0,
-            max_value=250.0,
-            value=70.0,
-            step=0.5,
-            help="Enter your weight in kilograms",
-            key="bmi_weight"
+    if results_df is None or len(results_df) == 0:
+        st.error("⚠️ Model comparison results not found.")
+        return
+    
+    # Quick stats
+    best_model, _ = create_best_model_analysis(results_df)
+    
+    stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
+    
+    with stats_col1:
+        st.metric("Best Accuracy", f"{best_model['Accuracy']:.1%}")
+    
+    with stats_col2:
+        st.metric("Best Precision", f"{best_model['Precision']:.1%}")
+    
+    with stats_col3:
+        st.metric("Best Recall", f"{best_model['Recall']:.1%}")
+    
+    with stats_col4:
+        st.metric("Best ROC-AUC", f"{best_model['ROC-AUC']:.3f}")
+    
+    st.markdown("---")
+    
+    # Section navigation
+    section = st.radio(
+        "Select Section",
+        ["📊 Overview", "🔥 Performance", "⚠️ Errors", "🎯 Ranking"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("---")
+    
+    # =====================================================
+    # SECTION 1: OVERVIEW
+    # =====================================================
+    if section == "📊 Overview":
+        st.markdown(
+            "<div class='insight-section-header'>📊 Model Comparison Overview</div>",
+            unsafe_allow_html=True
         )
-    
-    with col2:
-        height = st.number_input(
-            "Height (m)",
-            min_value=0.50,
-            max_value=2.50,
-            value=1.70,
-            step=0.01,
-            help="Enter your height in meters",
-            key="bmi_height"
+        
+        st.markdown(
+            "<div class='insight-section-sub'>"
+            "All three tuned models evaluated on the same test set. Here's how they compare across all metrics."
+            "</div>",
+            unsafe_allow_html=True
         )
-    
-    # Calculate Button - Full width below inputs
-    st.markdown('<div class="bmi-calculate-btn">', unsafe_allow_html=True)
-    calculate_clicked = st.button("📊 Calculate BMI", use_container_width=True, key="bmi_calculate")
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Display results if calculated
-    if calculate_clicked:
-        bmi = weight / (height ** 2)
         
-        # Determine category
-        if bmi < 18.5:
-            category = "Underweight"
-            color = "#4fc3f7"
-            emoji = "📉"
-            message = "Consider consulting a nutritionist for a healthy weight gain plan."
-            position = (bmi / 40) * 100
-        elif bmi < 25:
-            category = "Normal Weight"
-            color = "#66bb6a"
-            emoji = "✅"
-            message = "Great job! Maintain your healthy lifestyle."
-            position = ((bmi - 18.5) / (24.9 - 18.5)) * 25 + 25
-        elif bmi < 30:
-            category = "Overweight"
-            color = "#ffca28"
-            emoji = "⚠️"
-            message = "Consider lifestyle changes to reach a healthy weight."
-            position = ((bmi - 25) / (29.9 - 25)) * 25 + 50
-        else:
-            category = "Obese"
-            color = "#ef5350"
-            emoji = "❌"
-            message = "Please consult a healthcare professional for guidance."
-            position = min(((bmi - 30) / 10) * 25 + 75, 95)
+        # Performance table
+        st.markdown("<div class='insight-plot-title'>📋 Performance Metrics</div>", unsafe_allow_html=True)
         
-        position = max(2, min(98, position))
+        display_df = results_df[["Model", "Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]].copy()
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
         
-        # BMI Result Display
-        st.markdown(f"""
-        <div class="bmi-result-box">
-            <div style="font-size: 16px; color: #888; font-weight: 500;">Your BMI</div>
-            <div class="bmi-value-large">{bmi:.1f}</div>
-            <div class="bmi-category" style="color: {color};">{emoji} {category}</div>
-            <div class="bmi-message">{message}</div>
+        st.markdown("""
+        <div class="insight-plot-desc">
+        <b>What these metrics mean:</b><br>
+        • <b>Accuracy</b>: Overall correctness<br>
+        • <b>Precision</b>: When model says "Diabetes", how often is it right?<br>
+        • <b>Recall</b>: Of all actual diabetic cases, how many does the model catch?<br>
+        • <b>F1-Score</b>: Balance between Precision and Recall<br>
+        • <b>ROC-AUC</b>: Ability to discriminate between classes
         </div>
         """, unsafe_allow_html=True)
         
-        # BMI Scale Bar
-        st.markdown("""
-        <div class="bmi-scale-container">
-            <div style="text-align: center; font-weight: 600; font-size: 18px; margin-bottom: 10px;">
-                BMI Scale
-            </div>
-            <div class="bmi-scale-bar">
-                <div class="bmi-marker" style="left: {:.1f}%;"></div>
-            </div>
-            <div class="bmi-labels">
-                <span style="color: #4fc3f7;">Underweight</span>
-                <span style="color: #81c784;">Normal</span>
-                <span style="color: #fff176;">Overweight</span>
-                <span style="color: #ef5350;">Obese</span>
-            </div>
-        </div>
-        """.format(position), unsafe_allow_html=True)
+        # Comparison chart
+        st.markdown("<div class='insight-plot-title'>📈 Metrics Comparison</div>", unsafe_allow_html=True)
+        fig = create_model_comparison_chart(results_df)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # =====================================================
+    # SECTION 2: PERFORMANCE
+    # =====================================================
+    elif section == "🔥 Performance":
+        st.markdown(
+            "<div class='insight-section-header'>🔥 Detailed Performance Analysis</div>",
+            unsafe_allow_html=True
+        )
         
-        # Detailed Information
-        st.markdown("### 📋 Detailed BMI Information")
+        st.markdown(
+            "<div class='insight-section-sub'>"
+            "Confusion matrices and detailed metrics for each model."
+            "</div>",
+            unsafe_allow_html=True
+        )
         
-        col1, col2 = st.columns([1, 1])
+        # Confusion matrices
+        st.markdown("<div class='insight-plot-title'>🔲 Confusion Matrices</div>", unsafe_allow_html=True)
         
-        with col1:
-            st.markdown(f"""
-            <div class="bmi-info-grid">
-                <div class="bmi-info-item">
-                    <div class="label">Your BMI</div>
-                    <div class="value">{bmi:.1f}</div>
-                </div>
-                <div class="bmi-info-item" style="border-left-color: {color};">
-                    <div class="label">Category</div>
-                    <div class="value" style="color: {color};">{category}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        matrices = create_confusion_matrices(results_df)
+        cols = st.columns(len(matrices))
         
-        with col2:
-            categories = [
-                ("Underweight", "< 18.5", bmi < 18.5, "underweight"),
-                ("Normal", "18.5 - 24.9", 18.5 <= bmi < 25, "normal"),
-                ("Overweight", "25 - 29.9", 25 <= bmi < 30, "overweight"),
-                ("Obese", ">= 30", bmi >= 30, "obese")
-            ]
+        for col, (model_name, cm) in zip(cols, matrices.items()):
+            with col:
+                fig = plot_confusion_matrix(cm, model_name)
+                st.pyplot(fig, use_container_width=True)
+                
+                # Calculate rates
+                tn, fp, fn, tp = cm.ravel()
+                sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+                
+                st.metric("Sensitivity", f"{sensitivity:.1%}")
+    
+    # =====================================================
+    # SECTION 3: ERRORS
+    # =====================================================
+    elif section == "⚠️ Errors":
+        st.markdown(
+            "<div class='insight-section-header'>⚠️ Error Analysis</div>",
+            unsafe_allow_html=True
+        )
+        
+        st.markdown(
+            "<div class='insight-section-sub'>"
+            "False Negatives (missed cases) are more harmful than False Positives."
+            "</div>",
+            unsafe_allow_html=True
+        )
+        
+        st.markdown("<div class='insight-plot-title'>📊 False Negatives vs False Positives</div>", unsafe_allow_html=True)
+        fig = create_error_analysis(results_df)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # =====================================================
+    # SECTION 4: RANKING
+    # =====================================================
+    elif section == "🎯 Ranking":
+        st.markdown(
+            "<div class='insight-section-header'>🎯 Final Model Ranking</div>",
+            unsafe_allow_html=True
+        )
+        
+        best_model, ranked_df = create_best_model_analysis(results_df)
+        ranked_df = ranked_df.sort_values("score", ascending=False).reset_index(drop=True)
+        
+        st.markdown("<div class='insight-plot-title'>🏆 Models Ranked</div>", unsafe_allow_html=True)
+        
+        for idx, (_, row) in enumerate(ranked_df.iterrows()):
+            medal = ["🥇", "🥈", "🥉"][idx] if idx < 3 else "  "
             
-            for name, range_text, active, class_name in categories:
-                active_class = "active" if active else ""
+            col1, col2 = st.columns([0.5, 2])
+            
+            with col1:
+                st.markdown(f"<div style='font-size: 24px;'>{medal}</div>", unsafe_allow_html=True)
+            
+            with col2:
                 st.markdown(f"""
-                <div class="bmi-category-item {class_name} {active_class}">
-                    <span>{name}</span>
-                    <span class="range">{range_text}</span>
+                <div style='padding: 10px; background: #f5f7fa; border-radius: 8px;'>
+                    <b>{row['Model']}</b> - Score: {row['score']:.4f}
                 </div>
                 """, unsafe_allow_html=True)
-        
-        # Health Implications
-        st.markdown("### 💡 Health Implications")
-        
-        if bmi < 18.5:
-            st.info("""
-            **Underweight (< 18.5):** May indicate malnutrition, eating disorders, 
-            or other health issues. Consider consulting a healthcare provider.
-            """)
-        elif bmi < 25:
-            st.success("""
-            **Normal (18.5 - 24.9):** Healthy weight range for most adults. 
-            Keep up the good work with a balanced diet and regular exercise.
-            """)
-        elif bmi < 30:
-            st.warning("""
-            **Overweight (25 - 29.9):** Increased risk of health problems. 
-            Consider adopting healthier eating habits and increasing physical activity.
-            """)
-        else:
-            st.error("""
-            **Obese (>= 30):** High risk of health problems including diabetes, 
-            heart disease, and more. Please consult a healthcare professional.
-            """)
-        
-        st.markdown("""
-        <div class="bmi-note">
-            <strong>📌 Note:</strong> BMI is a screening tool and doesn't account for 
-            muscle mass, bone density, or overall body composition. It should be used 
-            as a general guideline, not a definitive diagnostic tool.
-        </div>
-        """, unsafe_allow_html=True)
-
+ 
 # =====================================================
-# Home Page
+# HOME PAGE (Your existing code)
 # =====================================================
+ 
 def home_page():
+    """Home page"""
     st.markdown(
         "<h1 class='main-title'>🏥 Diabetes Prediction System</h1>",
         unsafe_allow_html=True
     )
     
     st.markdown(
-        "<p class='sub-title'>An AI-powered tool for early diabetes risk assessment and health monitoring</p>",
+        "<p class='sub-title'>An AI-powered tool for early diabetes risk assessment</p>",
         unsafe_allow_html=True
     )
     
-    # Features Section
-    st.markdown("### 🚀 Features")
+    st.markdown("""
+    ### 🚀 Features
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🩺</div>
-            <div class="feature-title">Diabetes Prediction</div>
-            <div class="feature-desc">
-                AI-powered prediction using 8 health parameters.
-                Get instant risk assessment and personalized recommendations.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">⚖️</div>
-            <div class="feature-title">BMI Calculator</div>
-            <div class="feature-desc">
-                Calculate your Body Mass Index and get detailed health insights.
-                Track your weight status and receive lifestyle recommendations.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">📊</div>
-            <div class="feature-title">History Tracking</div>
-            <div class="feature-desc">
-                View your prediction history and track health trends over time.
-                Monitor changes and make informed health decisions.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # How it works
-    st.markdown("### 📋 How It Works")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown("""
-        **1️⃣ Enter Data**
-        - Manual input or file upload
-        - 8 health parameters required
-        - Age, Glucose, BMI, etc.
-        """)
-    
-    with col2:
-        st.markdown("""
-        **2️⃣ AI Analysis**
-        - Machine learning prediction
-        - Instant risk assessment
-        - Probability scoring
-        """)
-    
-    with col3:
-        st.markdown("""
-        **3️⃣ Get Results**
-        - Risk probability score
-        - Visual gauge chart
-        - Personalized recommendations
-        """)
-
+    - 🩺 **Diabetes Prediction**: AI-powered prediction using 8 health parameters
+    - ⚖️ **BMI Calculator**: Calculate your Body Mass Index
+    - 📊 **History Tracking**: View your prediction history
+    - 📈 **Model Insights**: Understand how the model works
+    """)
+ 
 # =====================================================
-# History Page
+# MAIN APP NAVIGATION
 # =====================================================
-def history_page():
-    st.markdown(
-        "<h1 class='main-title'>📊 Prediction History</h1>",
-        unsafe_allow_html=True
-    )
-    
-    st.markdown(
-        "<p class='sub-title'>View your past predictions and track health trends</p>",
-        unsafe_allow_html=True
-    )
-    
-    if "history" not in st.session_state or not st.session_state.history:
-        st.info("📭 No predictions in history yet. Start by making a prediction!")
-        return
-    
-    # Summary statistics
-    total = len(st.session_state.history)
-    high_risk = sum(1 for h in st.session_state.history if h.get("risk_level") in ["High", "Very High"])
-    diabetic = sum(1 for h in st.session_state.history if h.get("prediction") == 1)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Predictions", total)
-    with col2:
-        st.metric("High Risk", high_risk, delta=f"{high_risk/total*100:.1f}%" if total > 0 else "0%")
-    with col3:
-        st.metric("Diabetes Detected", diabetic, delta=f"{diabetic/total*100:.1f}%" if total > 0 else "0%")
-    with col4:
-        st.metric("Low Risk", total - high_risk, delta=f"{(total-high_risk)/total*100:.1f}%" if total > 0 else "0%")
-    
-    st.markdown("---")
-    
-    # History list
-    st.markdown("### 📋 Prediction Records")
-    
-    # Filter options
-    filter_col1, filter_col2 = st.columns(2)
-    
-    with filter_col1:
-        risk_filter = st.selectbox(
-            "Filter by Risk Level",
-            ["All", "Low", "Mild", "Moderate", "High", "Very High"]
-        )
-    
-    with filter_col2:
-        sort_order = st.selectbox(
-            "Sort by",
-            ["Newest First", "Oldest First", "Highest Risk", "Lowest Risk"]
-        )
-    
-    # Filter and sort history with proper datetime handling
-    filtered_history = st.session_state.history.copy()
-    
-    if risk_filter != "All":
-        filtered_history = [h for h in filtered_history if h.get("risk_level") == risk_filter]
-    
-    if sort_order == "Newest First":
-        filtered_history.sort(key=lambda x: datetime.strptime(x["timestamp"], "%Y-%m-%d %H:%M:%S"), reverse=True)
-    elif sort_order == "Oldest First":
-        filtered_history.sort(key=lambda x: datetime.strptime(x["timestamp"], "%Y-%m-%d %H:%M:%S"))
-    elif sort_order == "Highest Risk":
-        filtered_history.sort(key=lambda x: x.get("diabetes_probability", 0) if x.get("diabetes_probability") is not None else -1, reverse=True)
-    elif sort_order == "Lowest Risk":
-        filtered_history.sort(key=lambda x: x.get("diabetes_probability", 0) if x.get("diabetes_probability") is not None else 999)
-    
-    # =====================================================
-    # Diabetic vs Non-Diabetic Pie Chart + Risk Level Breakdown
-    # (dynamic - both follow the filter above)
-    # =====================================================
-    st.markdown("### 📊 Diabetic vs Non-Diabetic Overview")
-    
-    diabetic_count = sum(1 for h in filtered_history if h.get("prediction") == 1)
-    non_diabetic_count = sum(1 for h in filtered_history if h.get("prediction") == 0)
-    
-    if diabetic_count + non_diabetic_count > 0:
-        chart_col1, chart_col2 = st.columns(2)
-        
-        with chart_col1:
-            pie_fig = go.Figure(
-                go.Pie(
-                    labels=["Non-Diabetic", "Diabetic"],
-                    values=[non_diabetic_count, diabetic_count],
-                    marker_colors=["#4CAF50", "#F44336"],
-                    hole=0.45,
-                    textinfo="label+percent",
-                    textfont=dict(size=13)
-                )
-            )
-            pie_fig.update_layout(
-                height=380,
-                margin=dict(l=20, r=20, t=40, b=20),
-                title=dict(text="Prediction Outcome", x=0.5, xanchor="center"),
-                showlegend=True,
-                legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
-                paper_bgcolor="white"
-            )
-            st.plotly_chart(pie_fig, use_container_width=True, key="history_pie_chart")
-        
-        with chart_col2:
-            # Risk Level Breakdown - shows severity distribution, not just binary outcome
-            risk_order = ["Low", "Mild", "Moderate", "High", "Very High"]
-            risk_colors_map = {
-                "Low": "#4CAF50", "Mild": "#8BC34A", "Moderate": "#FFC107",
-                "High": "#FF9800", "Very High": "#F44336"
-            }
-            risk_counts = {r: sum(1 for h in filtered_history if h.get("risk_level") == r) for r in risk_order}
-            risk_counts = {r: c for r, c in risk_counts.items() if c > 0}
-            
-            if risk_counts:
-                risk_fig = go.Figure(
-                    go.Pie(
-                        labels=list(risk_counts.keys()),
-                        values=list(risk_counts.values()),
-                        marker_colors=[risk_colors_map[r] for r in risk_counts.keys()],
-                        hole=0.45,
-                        textinfo="label+percent",
-                        textfont=dict(size=13)
-                    )
-                )
-                risk_fig.update_layout(
-                    height=380,
-                    margin=dict(l=20, r=20, t=40, b=20),
-                    title=dict(text="Risk Level Breakdown", x=0.5, xanchor="center"),
-                    showlegend=True,
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
-                    paper_bgcolor="white"
-                )
-                st.plotly_chart(risk_fig, use_container_width=True, key="history_risk_pie_chart")
-        
-        st.caption(
-            f"Showing {diabetic_count + non_diabetic_count} record(s) "
-            f"matching the current filter ({risk_filter})."
-        )
-        
-        # =====================================================
-        # Diabetes Probability Trend Over Time
-        # Shows whether risk is climbing, falling, or stable across
-        # successive predictions -- useful for tracking a single
-        # patient over repeated checks, or spotting drift in a batch.
-        # =====================================================
-        st.markdown("### 📈 Diabetes Probability Trend")
-        
-        trend_entries = [
-            h for h in filtered_history if h.get("diabetes_probability") is not None
-        ]
-        trend_entries = sorted(
-            trend_entries,
-            key=lambda x: datetime.strptime(x["timestamp"], "%Y-%m-%d %H:%M:%S")
-        )
-        
-        if len(trend_entries) >= 2:
-            timestamps = [e["timestamp"] for e in trend_entries]
-            probs = [e["diabetes_probability"] for e in trend_entries]
-            point_colors = [get_risk_color(e.get("risk_level", "Unknown")) for e in trend_entries]
-            
-            trend_fig = go.Figure(
-                go.Scatter(
-                    x=timestamps,
-                    y=probs,
-                    mode="lines+markers",
-                    line=dict(color="#1A237E", width=2),
-                    marker=dict(size=9, color=point_colors, line=dict(width=1, color="white")),
-                    hovertemplate="%{x}<br>Diabetes Probability: %{y:.1f}%<extra></extra>"
-                )
-            )
-            trend_fig.add_hline(
-                y=50, line_dash="dot", line_color="#999",
-                annotation_text="50% threshold", annotation_position="top left"
-            )
-            trend_fig.update_layout(
-                height=380,
-                margin=dict(l=20, r=20, t=30, b=60),
-                yaxis_title="Diabetes Probability (%)",
-                xaxis_title="Prediction Timestamp",
-                yaxis=dict(range=[0, 100], gridcolor="#eee"),
-                xaxis=dict(showgrid=False, tickangle=-30),
-                plot_bgcolor="white",
-                paper_bgcolor="white",
-                showlegend=False
-            )
-            st.plotly_chart(trend_fig, use_container_width=True, key="history_trend_chart")
-            st.caption(
-                "Marker color reflects risk level at that prediction. "
-                "Useful for spotting whether risk is rising, falling, or stable across repeated checks."
-            )
-        else:
-            st.info("Need at least 2 matching predictions to plot a trend.")
-    else:
-        st.info("No records match the current filter to display in the chart.")
-    
-    st.markdown("---")
-    
-    # Display history entries
-    for entry in filtered_history:
-        risk_level = entry.get("risk_level", "Unknown")
-        color = get_risk_color(risk_level)
-        diabetes_prob = entry.get("diabetes_probability")
-        
-        with st.container():
-            st.markdown(f"""
-            <div class="history-card" style="border-left-color: {color};">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <span class="history-date">🕐 {entry['timestamp']}</span>
-                        <br>
-                        <span class="history-result" style="color: {color};">
-                            {entry['prediction'] == 1 and '🔴' or '🟢'} 
-                            {entry['prediction'] == 1 and 'Diabetes Detected' or 'No Diabetes'}
-                        </span>
-                        <br>
-                        <span style="font-size: 14px; color: #666;">
-                            Risk Level: <strong style="color: {color};">{risk_level}</strong>
-                            {f'| Probability: <strong>{diabetes_prob:.1f}%</strong>' if diabetes_prob is not None else ''}
-                        </span>
-                    </div>
-                    <div style="text-align: right; font-size: 12px; color: #888;">
-                        <span>Pregnancies: {entry.get('patient_data', {}).get('Pregnancies', 'N/A')}</span><br>
-                        <span>Glucose: {entry.get('patient_data', {}).get('Glucose', 'N/A')}</span><br>
-                        <span>BMI: {entry.get('patient_data', {}).get('BMI', 'N/A')}</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Export functionality
-    st.markdown("---")
-    st.markdown("### 💾 Export History")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🗑️ Clear History", use_container_width=True):
-            st.session_state.history = []
-            if Path("history.csv").exists():
-                Path("history.csv").unlink()
-            st.rerun()
-    
-    with col2:
-        if st.session_state.history:
-            # Convert history to DataFrame for export
-            export_data = []
-            for entry in st.session_state.history:
-                row = {
-                    "Timestamp": entry["timestamp"],
-                    "Prediction": "Diabetes" if entry["prediction"] == 1 else "No Diabetes",
-                    "Diabetes_Probability": entry.get("diabetes_probability", 0),
-                    "Risk_Level": entry.get("risk_level", "Unknown")
-                }
-                # Add patient data
-                patient_data = entry.get("patient_data", {})
-                for key, value in patient_data.items():
-                    row[key] = value
-                export_data.append(row)
-            
-            df_export = pd.DataFrame(export_data)
-            csv = df_export.to_csv(index=False)
-            
-            st.download_button(
-                "📥 Download History as CSV",
-                csv,
-                "prediction_history.csv",
-                "text/csv",
-                use_container_width=True
-            )
-
-
-# =====================================================
-# Model Insights Page Styles (NEW)
-# =====================================================
-st.markdown("""
-<style>
-.insight-section-header {
-    font-size: 26px;
-    font-weight: 800;
-    color: #1A237E;
-    margin: 6px 0 4px 0;
-}
-.insight-section-sub {
-    color: #444;
-    font-size: 16.5px;
-    line-height: 1.85;
-    margin-bottom: 22px;
-    text-align: justify;
-}
-.insight-stat-card {
-    background: white;
-    border-radius: 16px;
-    padding: 18px 10px;
-    text-align: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    border-top: 4px solid #1A237E;
-    height: 100%;
-}
-.insight-stat-icon { font-size: 26px; margin-bottom: 4px; }
-.insight-stat-value { font-size: 20px; font-weight: 800; color: #1A237E; }
-.insight-stat-label {
-    font-size: 12px;
-    color: #777;
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-}
-.insight-plot-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #1A237E;
-    margin: 26px 0 12px 0;
-}
-.insight-plot-desc {
-    font-size: 16.5px;
-    color: #444;
-    line-height: 1.85;
-    margin-top: 14px;
-    margin-bottom: 6px;
-    text-align: justify;
-}
-.insight-missing-box {
-    background: #fff8e1;
-    border: 1px dashed #e0a800;
-    border-radius: 12px;
-    padding: 30px 18px;
-    text-align: center;
-    color: #7a5c00;
-    font-size: 13.5px;
-}
-.insight-divider {
-    border: none;
-    border-top: 2px dotted #b0b8e0;
-    margin: 30px 0;
-}
-.insight-nav-step {
-    text-align: center;
-    color: #8891bb;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: .3px;
-    padding-top: 10px;
-}
-div[data-testid="stRadio"] > div {
-    gap: 6px;
-}
-div[data-testid="stRadio"] label {
-    background: #f0f2f6;
-    padding: 8px 16px;
-    border-radius: 20px;
-    margin-right: 4px;
-    font-weight: 600;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# =====================================================
-# Model Insights Helper Functions (NEW)
-# All numbers below are taken directly from the printed
-# output of DiabetesPredictor_TrainingCode.ipynb
-# =====================================================
-PLOTS_DIR = "plots"
-
-def show_insight_plot(filename, icon, title, explanation, caption=None):
-    """Render one training-notebook chart with a title + plain-language
-    explanation. Falls back to a friendly placeholder if the image hasn't
-    been added to the plots/ folder yet (e.g. before first GitHub push)."""
-    st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
-    path = os.path.join(PLOTS_DIR, filename)
-    if os.path.exists(path):
-        st.image(path, use_container_width=True, caption=caption)
-    else:
-        st.markdown(f"""
-        <div class="insight-missing-box">
-            📁 <b>{filename}</b> wasn't found in the <code>plots/</code> folder yet.<br>
-            <span style="font-size:12.5px;">Export this chart from your notebook and push it into your
-            GitHub repo's <code>plots/</code> folder next to <code>app.py</code>.</span>
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown(f'<div class="insight-plot-desc">{explanation}</div>', unsafe_allow_html=True)
-
-def insight_divider(margin=None):
-    """A simple dotted-line separator between chart blocks (used instead of
-    the old card-box wrapper, which rendered as a stray empty box in
-    Streamlit because opening/closing <div> tags can't span separate
-    st.markdown calls). Pass a custom `margin` (e.g. "20px 0 8px 0") to
-    override the default spacing for a specific spot, like just above the
-    Back/Next navigation row."""
-    style = f' style="margin:{margin};"' if margin else ""
-    st.markdown(f'<hr class="insight-divider"{style}>', unsafe_allow_html=True)
-
-def show_insight_plot_slot(filename, caption=None):
-    """Render just the image (or placeholder) for use inside multi-column
-    layouts like confusion matrices / ROC curves / learning curves."""
-    path = os.path.join(PLOTS_DIR, filename)
-    if os.path.exists(path):
-        st.image(path, use_container_width=True, caption=caption)
-    else:
-        st.markdown(f'<div class="insight-missing-box">📁 {filename}<br>not found</div>', unsafe_allow_html=True)
-
-def insight_group_header(title, subtitle):
-    st.markdown(f"""
-    <div class="insight-section-header">{title}</div>
-    <div class="insight-section-sub">{subtitle}</div>
-    """, unsafe_allow_html=True)
-
-def _set_insights_section(section_name):
-    """Callback for the Back/Next navigation buttons below each section.
-    Runs before the script reruns, so it's safe to write to the radio's
-    own session_state key here (unlike doing it in the main script body).
-    Also flags that the page should jump back to the top once the new
-    section renders, so the person doesn't land mid-scroll on new content."""
-    st.session_state["insights_section"] = section_name
-    st.session_state["insights_scroll_top"] = True
-
-def _scroll_insights_to_top():
-    """If the Back/Next buttons were just clicked, force the browser back
-    to the top of the page. Streamlit reruns in place and normally keeps
-    the current scroll position, which would strand the person mid-page
-    looking at a half-rendered new section.
-
-    Different Streamlit versions use different elements as the actual
-    scrolling container (window, <body>, section.main, or one of the
-    stAppViewContainer/stMain test-id divs), so this resets all of them,
-    and retries a few times shortly after render since Streamlit keeps
-    reflowing content for a moment after the rerun starts.
-
-    IMPORTANT: the injected HTML must be different on every call. If the
-    exact same markup is passed to components.html() twice in a row, the
-    browser treats the iframe as unchanged and never reloads it, so the
-    script only actually runs the very first time. A unique nonce forces
-    a fresh iframe (and therefore a fresh script execution) on every
-    single Back/Next click, not just the first one."""
-    if st.session_state.get("insights_scroll_top"):
-        st.session_state["insights_scroll_top"] = False
-        nonce = uuid.uuid4().hex
-        components.html(
-            f"""
-            <script>
-                // nonce: {nonce} (forces this iframe to reload every time)
-                function scrollAppToTop() {{
-                    try {{
-                        var w = window.parent;
-                        var doc = w.document;
-                        w.scrollTo(0, 0);
-                        doc.documentElement.scrollTop = 0;
-                        doc.body.scrollTop = 0;
-                        var selectors = [
-                            'section.main',
-                            '[data-testid="stMain"]',
-                            '[data-testid="stAppViewContainer"]',
-                            '[data-testid="stAppViewContainer"] > div',
-                            '.main .block-container'
-                        ];
-                        selectors.forEach(function (sel) {{
-                            var el = doc.querySelector(sel);
-                            if (el) {{ el.scrollTop = 0; }}
-                        }});
-                    }} catch (e) {{}}
-                }}
-                scrollAppToTop();
-                setTimeout(scrollAppToTop, 50);
-                setTimeout(scrollAppToTop, 150);
-                setTimeout(scrollAppToTop, 350);
-                setTimeout(scrollAppToTop, 600);
-            </script>
-            """,
-            height=0,
-        )
-
-def model_insights_page():
-    """NEW PAGE: shows every chart produced by the Training Notebook,
-    grouped into EDA / Preprocessing / Model Performance / Feature Importance /
-    Final Comparison, each with a plain-language explanation."""
-
-    st.markdown("<h1 class='main-title'>📈 Model Insights & Visualizations</h1>", unsafe_allow_html=True)
-    _scroll_insights_to_top()
-    st.markdown(
-        "<p class='sub-title'>A behind-the-scenes look at the data, the cleaning steps, and the model "
-        "evaluation behind this app — straight from the training notebook.</p>",
-        unsafe_allow_html=True
-    )
-
-    # ---- Quick stats strip ----
-    quick_stats = [
-        ("🗂️", "768", "Patients in dataset"),
-        ("⚖️", "34.9%", "Diabetic cases"),
-        ("🌳", "RF (Tuned)", "Deployed model"),
-        ("🎯", "78.8%", "Test accuracy"),
-        ("📈", "0.830", "ROC-AUC score"),
-    ]
-    cols = st.columns(5)
-    for col, (icon, value, label) in zip(cols, quick_stats):
-        with col:
-            st.markdown(f"""
-            <div class="insight-stat-card">
-                <div class="insight-stat-icon">{icon}</div>
-                <div class="insight-stat-value">{value}</div>
-                <div class="insight-stat-label">{label}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
-
-    insights_sections = ["🔍 EDA", "🧹 Preprocessing", "🤖 Model Performance", "🌟 Feature Importance", "🏆 Final Comparison"]
-
-    section = st.radio(
-        "Section",
-        insights_sections,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="insights_section"
-    )
-
-    st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
-
-    # =====================================================
-    # SECTION 1 — Exploratory Data Analysis
-    # =====================================================
-    if section == "🔍 EDA":
-        insight_group_header(
-            "🔍 Exploratory Data Analysis",
-            "Understanding the raw data before any cleaning — 768 patient records, 8 clinical features, "
-            "from the Pima Indians Diabetes dataset."
-        )
-
-        show_insight_plot(
-            "01_target_distribution.png", "⚖️", "Target Distribution",
-            "The bar chart outlines the class balance of the dataset: <b>500 non-diabetic (65.1%)</b> vs <b>268 diabetic (34.9%)</b> patients. "
-            "Understanding this imbalance is critical as it informs the model training process and dictates why class weights were balanced later in the pipeline."
-        )
-        insight_divider()
-
-        show_insight_plot(
-            "04_correlation_analysis.png", "🔗", "Correlation Analysis After Zero-Value Treatment",
-            "This heatmap and bar chart show how every feature relates to the Outcome and each other after treating the impossible zeros. "
-            "<b>Glucose</b> is typically the strongest single predictor of diabetes, followed by <b>BMI</b> and <b>Age</b>. "
-            "This pattern is confirmed independently by the Random Forest's own feature importance scores further down this page."
-        )
-
-    # =====================================================
-    # SECTION 2 — Preprocessing
-    # =====================================================
-    elif section == "🧹 Preprocessing":
-        insight_group_header(
-            "🧹 Data Cleaning & Preprocessing",
-            "In this dataset, a value of 0 for certain metrics (Glucose, Blood Pressure, Skin Thickness, Insulin, or BMI) isn't "
-            "physiologically possible — it means the value was never recorded. Here's how those hidden gaps were "
-            "found and fixed."
-        )
-
-        c1, c2 = st.columns(2)
-        with c1:
-            show_insight_plot(
-                "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
-                "Counting the zero entries in the dataset exposes the extent of the unrecorded data: "
-                "<b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), "
-                "<b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
-            )
-        with c2:
-            show_insight_plot(
-                "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
-                "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). "
-                "This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
-            )
-        insight_divider()
-
-        show_insight_plot(
-            "05_summary_stats_after_imputation.png", "🧮", "Median Imputation",
-            "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
-            "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
-        )
-        insight_divider()
-
-        show_insight_plot(
-            "06_outlier_detection_treatment.png", "🎯", "Outlier Detection (Local Outlier Factor)",
-            "A Local Outlier Factor model (20 neighbors, 5% contamination) flagged the most abnormal patient "
-            "records after imputation. This step trimmed the dataset from <b>768 → 729 patients</b> (about 5%) before the "
-            "train/test split, reducing the influence a handful of unusual records could have on the model."
-        )
-
-    # =====================================================
-    # SECTION 3 — Model Performance
-    # =====================================================
-    elif section == "🤖 Model Performance":
-        insight_group_header(
-            "🤖 Model Performance",
-            "Comparing the algorithms evaluated head-to-head on the test set."
-        )
-
-        st.markdown('<div class="insight-plot-title">📋 Base Model Comparison (before tuning)</div>', unsafe_allow_html=True)
-        
-        try:
-            base_results = pd.read_csv("model_comparison_results.csv")
-            metric_cols = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
-            valid_cols = [c for c in metric_cols if c in base_results.columns]
-            
-            styled = base_results.style.format({c: "{:.2%}" for c in valid_cols}).background_gradient(
-                cmap="Blues", subset=valid_cols
-            )
-            st.dataframe(styled, use_container_width=True, hide_index=True)
-            
-        except FileNotFoundError:
-            st.markdown(
-                '<div class="insight-missing-box">📁 <b>model_comparison_results.csv</b> wasn\'t found. '
-                'Export the metrics from the notebook and place the file next to <code>app.py</code>.</div>', 
-                unsafe_allow_html=True
-            )
-
-        st.markdown(
-            '<div class="insight-plot-desc">The metrics above are loaded directly from the <code>model_comparison_results.csv</code> file verbatim. '
-            'These numbers highlight the trade-offs each classifier makes between Precision (correctly flagging diabetic patients) '
-            'and Recall (detecting as many true diabetic cases as possible). The Random Forest algorithm historically leads on most core metrics.</div>',
-            unsafe_allow_html=True
-        )
-        insight_divider()
-
-        st.markdown('<div class="insight-plot-title">🧩 Confusion Matrices</div>', unsafe_allow_html=True)
-        cm1, cm2, cm3 = st.columns(3)
-        with cm1:
-            show_insight_plot_slot("10_confusion_matrix_knn.png")
-        with cm2:
-            show_insight_plot_slot("10_confusion_matrix_svm.png")
-        with cm3:
-            show_insight_plot_slot("10_confusion_matrix_random_forest.png")
-        st.markdown(
-            '<div class="insight-plot-desc">Each matrix shows correct vs incorrect predictions on the '
-            '146-patient test set: true negatives and true positives sit on the diagonal, while false '
-            'positives and false negatives sit off it.</div>',
-            unsafe_allow_html=True
-        )
-        insight_divider()
-
-        st.markdown('<div class="insight-plot-title">📈 ROC Curves</div>', unsafe_allow_html=True)
-        r1, r2, r3 = st.columns(3)
-        with r1:
-            show_insight_plot_slot("11_roc_curve_knn.png")
-        with r2:
-            show_insight_plot_slot("11_roc_curve_svm.png")
-        with r3:
-            show_insight_plot_slot("11_roc_curve_random_forest.png")
-        st.markdown(
-            '<div class="insight-plot-desc">The ROC curve plots true positive rate against false positive '
-            'rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the '
-            'higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across '
-            'the entire range of thresholds, not just the default 50% cutoff.</div>',
-            unsafe_allow_html=True
-        )
-
-    # =====================================================
-    # SECTION 4 — Feature Importance
-    # =====================================================
-    elif section == "🌟 Feature Importance":
-        insight_group_header(
-            "🌟 Feature Importance",
-            "Which of the 8 health measurements actually drive the Random Forest's predictions?"
-        )
-
-        c1, c2 = st.columns(2)
-        with c1:
-            show_insight_plot(
-                "13_feature_importance.png", "🏅", "Full Feature Ranking",
-                "<b>Glucose (39.3%)</b> dominates, followed by <b>BMI (19.5%)</b> and <b>Age (18.5%)</b> — "
-                "together these three drive over three-quarters of the model's decisions. <b>Insulin</b> and "
-                "<b>Pregnancies</b> contribute a modest 4.3% each, while <b>Skin Thickness (3.4%)</b> and "
-                "<b>Blood Pressure (1.9%)</b> contribute the least. This ranking is computed directly from how "
-                "much each feature reduces prediction error across every split in every tree of the forest."
-            )
-        with c2:
-            show_insight_plot(
-                "14_selected_features.png", "✂️", "After Feature Selection",
-                "Keeping only above-median-importance features leaves four: <b>Glucose, BMI, Diabetes "
-                "Pedigree Function, Age</b>. A lighter model trained on just these four reached <b>79.5% test "
-                "accuracy</b> with a smaller overfitting gap (3.2pt vs the full model's 1.0pt on this split) — "
-                "proof that the four dropped features (Pregnancies, Blood Pressure, Skin Thickness, Insulin) "
-                "were adding mostly noise rather than real signal. It's a useful sanity check, even though the "
-                "app itself still collects all 8 fields to stay compatible with the deployed model."
-            )
-
-    # =====================================================
-    # SECTION 5 — Final Comparison
-    # =====================================================
-    elif section == "🏆 Final Comparison":
-        insight_group_header(
-            "🏆 Final Model Comparison",
-            "After hyperparameter tuning via 5-fold Grid Search (243 parameter combinations, 1,215 fits), "
-            "here's how every candidate stacks up."
-        )
-
-        show_insight_plot(
-            "17_final_comparison.png", "🎯", "All Models, All Metrics",
-            "Side-by-side view of Accuracy, Precision, Recall, F1-Score and ROC-AUC for every model tested, "
-            "including the final tuned Random Forest, all on the same 0–1 scale so the trade-offs between "
-            "models are easy to compare at a glance rather than reading five separate numbers per model."
-        )
-        insight_divider()
-
-        st.markdown('<div class="insight-plot-title">🌳 Deployed Model: Random Forest (Tuned)</div>', unsafe_allow_html=True)
-        d1, d2, d3 = st.columns(3)
-        with d1:
-            st.metric("Test Accuracy", "78.8%")
-        with d2:
-            st.metric("ROC-AUC", "0.830")
-        with d3:
-            st.metric("Overfitting Gap", "3.6 pt", help="Moderate risk — Train 82.3% vs Test 78.8%")
-        st.markdown(
-            "<div class=\"insight-plot-desc\">A quick honesty note: the <b>untuned</b> Random Forest actually "
-            "scored a bit higher on this one 146-row test split (81.5% vs 78.8%). Grid Search (243 parameter "
-            "combinations, 5-fold cross-validation) optimizes for average performance across many folds of the "
-            "training data — not this single held-out test split — so the <b>tuned</b> model is the more "
-            "generalizable, trustworthy choice for real-world predictions even though its one-off test score "
-            "looks slightly lower here. In practice, a model that is consistently 'good enough' across many "
-            "different slices of data is usually safer to deploy than one that happens to score highest on "
-            "just one particular split. This tuned model is what's saved as <code>diabetes_model.pkl</code> "
-            "and powers every single prediction in this app.</div>",
-            unsafe_allow_html=True
-        )
-
-    # =====================================================
-    # Section navigation — Back / Next buttons
-    # First section only shows Next, last section only shows Back,
-    # everything in between shows both.
-    # =====================================================
-    insight_divider(margin="26px 0 10px 0")
-    current_idx = insights_sections.index(section)
-    is_first = current_idx == 0
-    is_last = current_idx == len(insights_sections) - 1
-
-    nav_back, nav_step, nav_next = st.columns([1, 1, 1])
-    with nav_back:
-        if not is_first:
-            st.button(
-                f"⬅️  {insights_sections[current_idx - 1]}",
-                use_container_width=True,
-                key="insights_nav_back",
-                on_click=_set_insights_section,
-                args=(insights_sections[current_idx - 1],)
-            )
-    with nav_step:
-        st.markdown(
-            f'<div class="insight-nav-step">SECTION {current_idx + 1} OF {len(insights_sections)}</div>',
-            unsafe_allow_html=True
-        )
-    with nav_next:
-        if not is_last:
-            st.button(
-                f"{insights_sections[current_idx + 1]}  ➡️",
-                use_container_width=True,
-                key="insights_nav_next",
-                on_click=_set_insights_section,
-                args=(insights_sections[current_idx + 1],)
-            )
-
-# =====================================================
-# Navigation - Tabs
-# =====================================================
-# Load history from CSV on first load
-if "history" not in st.session_state:
-    history = load_history_from_csv()
-    st.session_state.history = history if history else []
-
+ 
 # Create tabs
-tab_home, tab_diabetes, tab_bmi, tab_history, tab_insights = st.tabs([
+tab_home, tab_prediction, tab_insights = st.tabs([
     "🏠 Home",
     "🩺 Diabetes Prediction",
-    "⚖️ BMI Calculator",
-    "📊 History",
     "📈 Model Insights"
 ])
-
-# =====================================================
-# Home Tab
-# =====================================================
+ 
 with tab_home:
     home_page()
-
-# =====================================================
-# BMI Calculator Tab
-# =====================================================
-with tab_bmi:
-    bmi_calculator()
-
-# =====================================================
-# History Tab
-# =====================================================
-with tab_history:
-    history_page()
-
-# =====================================================
-# Model Insights Tab (NEW)
-# =====================================================
+ 
+with tab_prediction:
+    st.markdown("<h1 class='main-title'>🩺 Diabetes Prediction</h1>", unsafe_allow_html=True)
+    st.info("Your diabetes prediction form would go here...")
+ 
 with tab_insights:
     model_insights_page()
-
+ 
 # =====================================================
-# Diabetes Prediction Tab
+# Footer
 # =====================================================
-with tab_diabetes:
-    st.markdown(
-        "<h1 class='main-title'>🩺 Diabetes Prediction</h1>",
-        unsafe_allow_html=True
-    )
-    
-    st.markdown(
-        "<p class='sub-title'>Enter patient details below for risk assessment.</p>",
-        unsafe_allow_html=True
-    )
-    
-    st.markdown(
-        "<div class='section'>📋 Select Input Method</div>",
-        unsafe_allow_html=True
-    )
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        manual = st.button("✏️ Manual Input", use_container_width=True)
-    
-    with col2:
-        upload = st.button("📁 Upload File", use_container_width=True)
-    
-    if "mode" not in st.session_state:
-        st.session_state.mode = "manual"
-    
-    if manual:
-        st.session_state.mode = "manual"
-        # Clear any previous prediction results when switching modes
-        if "prediction" in st.session_state:
-            del st.session_state.prediction
-            del st.session_state.patient
-            del st.session_state.diabetes_prob
-            del st.session_state.healthy_prob
-        # Clear upload error if exists
-        if "upload_error" in st.session_state:
-            del st.session_state.upload_error
-        if "upload_data_error" in st.session_state:
-            del st.session_state.upload_data_error
-        # Reset uploader key
-        if "uploader_key" in st.session_state:
-            st.session_state.uploader_key = str(uuid.uuid4())
-        # Clear uploaded data results
-        if "upload_prediction_done" in st.session_state:
-            del st.session_state.upload_prediction_done
-    
-    if upload:
-        st.session_state.mode = "upload"
-        # Clear any previous prediction results when switching modes
-        if "prediction" in st.session_state:
-            del st.session_state.prediction
-            del st.session_state.patient
-            del st.session_state.diabetes_prob
-            del st.session_state.healthy_prob
-        # Clear upload error if exists
-        if "upload_error" in st.session_state:
-            del st.session_state.upload_error
-        if "upload_data_error" in st.session_state:
-            del st.session_state.upload_data_error
-        # Set uploader key
-        if "uploader_key" not in st.session_state:
-            st.session_state.uploader_key = str(uuid.uuid4())
-        # Clear uploaded data results
-        if "upload_prediction_done" in st.session_state:
-            del st.session_state.upload_prediction_done
-    
-    # Display mode indicator
-    if st.session_state.mode == "manual":
-        st.markdown("""
-        <div class="info">
-        📋 Currently using <b>Manual Input</b> mode. Enter patient details below.
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="info">
-        📁 Currently using <b>File Upload</b> mode. Upload a CSV or Excel file with patient data.
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # =====================================================
-    # MANUAL INPUT
-    # =====================================================
-    if st.session_state.mode == "manual":
-        # Initialize session state for form values if not exists
-        if "form_values" not in st.session_state:
-            st.session_state.form_values = {
-                "pregnancies": 0,
-                "glucose": 0,
-                "blood_pressure": 0,
-                "skin": 0,
-                "insulin": 0,
-                "bmi": 25.0,
-                "dpf": 0.471,
-                "age": 21
-            }
-        
-        with st.form("prediction_form"):
-            left, right = st.columns(2)
-            
-            with left:
-                pregnancies = st.slider(
-                    "👶 Pregnancies",
-                    0,
-                    20,
-                    value=st.session_state.form_values["pregnancies"],
-                    help="Number of pregnancies"
-                )
-                
-                glucose = st.number_input(
-                    "🩸 Glucose (mg/dL)",
-                    min_value=0,
-                    max_value=300,
-                    value=st.session_state.form_values["glucose"],
-                    help="Glucose level in blood (1-300 mg/dL)"
-                )
-                
-                blood_pressure = st.number_input(
-                    "❤️ Blood Pressure (mmHg)",
-                    min_value=0,
-                    max_value=200,
-                    value=st.session_state.form_values["blood_pressure"],
-                    help="Diastolic blood pressure (1-200 mmHg)"
-                )
-                
-                skin = st.number_input(
-                    "📏 Skin Thickness (mm)",
-                    min_value=0,
-                    max_value=99,
-                    value=st.session_state.form_values["skin"],
-                    step=1,
-                    help="Triceps skin fold thickness (1-99 mm)"
-                )
-            
-            with right:
-                insulin = st.number_input(
-                    "💉 Insulin (mu U/ml)",
-                    min_value=0,
-                    max_value=900,
-                    value=st.session_state.form_values["insulin"],
-                    help="2-Hour serum insulin (0-900)"
-                )
-                
-                bmi = st.number_input(
-                    "⚖️ BMI",
-                    min_value=0.0,
-                    max_value=100.0,
-                    value=st.session_state.form_values["bmi"],
-                    step=0.1,
-                    help="Body Mass Index (0.1-100)"
-                )
-                
-                dpf = st.number_input(
-                    "📊 Diabetes Pedigree Function",
-                    min_value=0.0,
-                    max_value=3.0,
-                    value=st.session_state.form_values["dpf"],
-                    step=0.01,
-                    help="Diabetes pedigree function (0.01-3.0)"
-                )
-                
-                age = st.number_input(
-                    "🎂 Age",
-                    min_value=0,
-                    max_value=120,
-                    value=st.session_state.form_values["age"],
-                    help="Age in years (1-120)"
-                )
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                predict = st.form_submit_button("🔍 Predict Diabetes", use_container_width=True)
-            
-            with col2:
-                reset = st.form_submit_button("🔄 Reset Form", use_container_width=True)
-        
-        # Handle Reset
-        if reset:
-            # Reset form values in session state
-            st.session_state.form_values = {
-                "pregnancies": 0,
-                "glucose": 0,
-                "blood_pressure": 0,
-                "skin": 0,
-                "insulin": 0,
-                "bmi": 25.0,
-                "dpf": 0.471,
-                "age": 21
-            }
-            # Clear prediction results
-            if "prediction" in st.session_state:
-                del st.session_state.prediction
-                del st.session_state.patient
-                del st.session_state.diabetes_prob
-                del st.session_state.healthy_prob
-            st.rerun()
-        
-        if predict:
-            # Validate all inputs
-            errors = validate_required_fields(
-                glucose, blood_pressure, bmi, age, dpf, skin, insulin, pregnancies
-            )
-            
-            if errors:
-                for error in errors:
-                    st.error(f"❌ {error}")
-                st.stop()
-            
-            # Check for zero values and show warnings
-            zero_warnings = []
-            if glucose == 0:
-                zero_warnings.append("Glucose is 0. Will be replaced with median value.")
-            if blood_pressure == 0:
-                zero_warnings.append("Blood Pressure is 0. Will be replaced with median value.")
-            if skin == 0:
-                zero_warnings.append("Skin Thickness is 0. Will be replaced with median value.")
-            if insulin == 0:
-                zero_warnings.append("Insulin is 0. Will be replaced with median value.")
-            if bmi == 0:
-                zero_warnings.append("BMI is 0. Will be replaced with median value.")
-            
-            if zero_warnings:
-                st.warning("⚠️ **Zero Values Detected**")
-                for warning in zero_warnings:
-                    st.warning(warning)
-                st.info("ℹ️ Zero values will be replaced with median values from the dataset for prediction.")
-            
-            # Create patient dataframe
-            patient = pd.DataFrame(
-                [[pregnancies, glucose, blood_pressure, skin, insulin, bmi, dpf, age]],
-                columns=[
-                    "Pregnancies", "Glucose", "BloodPressure", 
-                    "SkinThickness", "Insulin", "BMI", 
-                    "DiabetesPedigreeFunction", "Age"
-                ]
-            )
-            
-            # Make prediction
-            prediction, diabetes_prob, healthy_prob, patient_processed = predict_patient_manual(patient)
-            
-            if prediction is not None:
-                st.session_state.prediction = prediction
-                st.session_state.patient = patient
-                st.session_state.diabetes_prob = diabetes_prob
-                st.session_state.healthy_prob = healthy_prob
-                
-                # Store current values for persistence
-                st.session_state.form_values = {
-                    "pregnancies": pregnancies,
-                    "glucose": glucose,
-                    "blood_pressure": blood_pressure,
-                    "skin": skin,
-                    "insulin": insulin,
-                    "bmi": bmi,
-                    "dpf": dpf,
-                    "age": age
-                }
-                
-                # Add to history
-                add_to_history(patient_processed, prediction, diabetes_prob)
-    
-    # =====================================================
-    # FILE UPLOAD (Strict: No zero replacement)
-    # =====================================================
-    if st.session_state.mode == "upload":
-        # Check if there's an upload error in session state
-        if "upload_error" in st.session_state and st.session_state.upload_error:
-            # Display error with solution options
-            st.markdown(f"""
-            <div class="error-box">
-                <div class="error-title">❌ File Upload Error</div>
-                <div class="error-message">{st.session_state.upload_error}</div>
-                <div class="error-solution">
-                    <strong>💡 How to fix this:</strong><br>
-                    • Make sure your file is in CSV or Excel format (.csv, .xlsx, .xls)<br>
-                    • Check that your file contains the required columns:<br>
-                    <code>Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age</code><br>
-                    • Make sure the file is not empty or corrupted
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Options to resolve the error
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("📁 Upload Again", use_container_width=True):
-                    del st.session_state.upload_error
-                    st.session_state.uploader_key = str(uuid.uuid4())
-                    st.rerun()
-            
-            with col2:
-                if st.button("✏️ Switch to Manual Input", use_container_width=True):
-                    del st.session_state.upload_error
-                    st.session_state.mode = "manual"
-                    st.rerun()
-            
-            st.stop()
-        
-        # Check if there's a data validation error
-        if "upload_data_error" in st.session_state and st.session_state.upload_data_error:
-            # Display error with solution options
-            st.markdown(f"""
-            <div class="error-box">
-                <div class="error-title">❌ Data Validation Error</div>
-                <div class="error-message">{st.session_state.upload_data_error}</div>
-                <div class="error-solution">
-                    <strong>💡 How to fix this:</strong><br>
-                    • Make sure all values are within valid ranges (no zero values allowed)<br>
-                    • Check for missing or null values in your data<br>
-                    • Ensure all required fields are filled correctly<br>
-                    • <strong>Important:</strong> Zero values are not accepted. Please provide valid measurements.
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Options to resolve the error
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file"):
-                    del st.session_state.upload_data_error
-                    st.session_state.uploader_key = str(uuid.uuid4())
-                    st.rerun()
-            
-            with col2:
-                if st.button("✏️ Switch to Manual Input", use_container_width=True, key="switch_to_manual_error"):
-                    del st.session_state.upload_data_error
-                    st.session_state.mode = "manual"
-                    st.rerun()
-            
-            st.stop()
-        
-        # File uploader with unique key
-        uploader_key = st.session_state.get("uploader_key", str(uuid.uuid4()))
-        
-        uploaded_file = st.file_uploader(
-            "📤 Upload CSV or Excel File",
-            type=["csv", "xlsx", "xls"],
-            help="Upload a CSV or Excel file with the required columns. Zero values are not accepted.",
-            key=uploader_key
-        )
-        
-        if uploaded_file is not None:
-            try:
-                if uploaded_file.name.lower().endswith(".csv"):
-                    df = pd.read_csv(uploaded_file)
-                else:
-                    df = pd.read_excel(uploaded_file)
-                
-                required_columns = [
-                    "Pregnancies",
-                    "Glucose",
-                    "BloodPressure",
-                    "SkinThickness",
-                    "Insulin",
-                    "BMI",
-                    "DiabetesPedigreeFunction",
-                    "Age"
-                ]
-                
-                missing_columns = [
-                    col for col in required_columns
-                    if col not in df.columns
-                ]
-                
-                if missing_columns:
-                    st.session_state.upload_error = f"Missing required columns: {', '.join(missing_columns)}"
-                    st.rerun()
-                else:
-                    # Validate data values - STRICT (no zeros)
-                    validation_errors = validate_uploaded_data(df)
-                    
-                    if validation_errors:
-                        # Join errors with line breaks for better display
-                        error_message = "\n".join(validation_errors)
-                        st.session_state.upload_data_error = error_message
-                        st.rerun()
-                    
-                    # If we get here, data is valid
-                    st.subheader("📊 Uploaded Data")
-                    st.dataframe(df, use_container_width=True)
-                    
-                    if st.button("🚀 Predict Uploaded Data", use_container_width=True):
-                        with st.spinner("Making predictions..."):
-                            # Process each row - NO zero replacement
-                            results = []
-                            df_processed = df.copy()
-                            
-                            debug_rows = []
-                            for idx, row in df.iterrows():
-                                patient = pd.DataFrame([row[required_columns]])
-                                prediction, diabetes_prob, healthy_prob, raw_values = predict_patient_upload(patient)
-                                
-                                if prediction is not None:
-                                    results.append({
-                                        "Prediction": prediction,
-                                        "Diabetes_Probability": diabetes_prob if diabetes_prob is not None else 0,
-                                        "Healthy_Probability": healthy_prob if healthy_prob is not None else 0,
-                                        "Risk_Level": get_risk_level(diabetes_prob) if diabetes_prob is not None else "Unknown"
-                                    })
-                                    
-                                    # Add to history
-                                    add_to_history(row.to_dict(), prediction, diabetes_prob)
-                                    
-                                    # Capture debug info: raw feature values actually fed to the model
-                                    debug_entry = {"Row": idx + 1}
-                                    for col in required_columns:
-                                        debug_entry[f"raw_{col}"] = row[col]
-                                    debug_entry["Diabetes_Prob_%"] = round(diabetes_prob, 2) if diabetes_prob is not None else None
-                                    debug_rows.append(debug_entry)
-                                else:
-                                    results.append({
-                                        "Prediction": None,
-                                        "Diabetes_Probability": None,
-                                        "Healthy_Probability": None,
-                                        "Risk_Level": "Error"
-                                    })
-                            
-                            # Add results to dataframe
-                            result_df = pd.DataFrame(results)
-                            df["Prediction"] = result_df["Prediction"].apply(lambda x: "Diabetes" if x == 1 else "No Diabetes" if x == 0 else "Error")
-                            df["Diabetes_Probability"] = result_df["Diabetes_Probability"]
-                            df["Risk_Level"] = result_df["Risk_Level"]
-                            
-                            # Store in session state for display
-                            st.session_state.upload_prediction_done = True
-                            st.session_state.upload_results_df = df
-                            st.session_state.upload_results = results
-                            st.session_state.upload_original_df = df_processed
-                            st.session_state.upload_debug_rows = debug_rows
-                            
-                            st.rerun()
-            
-            except pd.errors.EmptyDataError:
-                st.session_state.upload_error = "The uploaded file is empty. Please upload a valid file."
-                st.rerun()
-            except Exception as e:
-                st.session_state.upload_error = f"Error reading file: {str(e)}"
-                st.rerun()
-        
-        # Display upload prediction results
-        if "upload_prediction_done" in st.session_state and st.session_state.upload_prediction_done:
-            st.markdown("---")
-            st.success("✅ Prediction completed!")
-            
-            # Display results with gauge charts
-            results_df = st.session_state.upload_results_df
-            results = st.session_state.upload_results
-            
-            # Show results table
-            st.dataframe(results_df, use_container_width=True)
-            
-            # =====================================================
-            # Debug panel - shows exactly what values the model saw
-            # =====================================================
-            with st.expander("🔍 Debug: Raw values fed to the model"):
-                st.success(
-                    "**Model input mode:** Raw (unscaled) values — matches how "
-                    "`diabetes_model.pkl` (RandomForestClassifier) was trained. "
-                    "`scaler.pkl` is intentionally not applied here; it was fit "
-                    "for the KNN/SVM experiments during model comparison, not "
-                    "for this tree-based model."
-                )
-                
-                debug_rows = st.session_state.get("upload_debug_rows", [])
-                if debug_rows:
-                    st.markdown("**Raw values per row** (what the model actually saw):")
-                    st.dataframe(pd.DataFrame(debug_rows), use_container_width=True)
-                    st.caption(
-                        "If predictions still look off, sanity-check individual "
-                        "rows against known clinical expectations (e.g. very high "
-                        "Glucose + high BMI should trend toward higher probability)."
-                    )
-            
-            # Show gauge chart for each prediction (show first 3 or all if less)
-            st.subheader("📊 Risk Visualization")
-            
-            num_to_show = min(len(results), 5)  # Show up to 5 charts
-            cols = st.columns(min(num_to_show, 3))
-            
-            for i in range(num_to_show):
-                col_idx = i % 3
-                with cols[col_idx]:
-                    if results[i]["Diabetes_Probability"] is not None:
-                        st.markdown(f"**Patient {i+1}**")
-                        fig = create_gauge_chart(results[i]["Diabetes_Probability"])
-                        if fig:
-                            st.plotly_chart(fig, use_container_width=True, key=f"gauge_upload_{i}")
-                        st.caption(f"Risk Level: {results[i]['Risk_Level']}")
-            
-            # Download button
-            csv = results_df.to_csv(index=False)
-            st.download_button(
-                "💾 Download Results",
-                csv,
-                "predictions.csv",
-                "text/csv",
-                use_container_width=True
-            )
-            
-            # Reset button under download
-            if st.button("🔄 Reset Upload & Start Over", use_container_width=True, key="reset_upload_after_results"):
-                if "prediction" in st.session_state:
-                    del st.session_state.prediction
-                if "upload_prediction_done" in st.session_state:
-                    del st.session_state.upload_prediction_done
-                if "upload_results_df" in st.session_state:
-                    del st.session_state.upload_results_df
-                if "upload_results" in st.session_state:
-                    del st.session_state.upload_results
-                if "upload_original_df" in st.session_state:
-                    del st.session_state.upload_original_df
-                if "upload_debug_rows" in st.session_state:
-                    del st.session_state.upload_debug_rows
-                st.session_state.uploader_key = str(uuid.uuid4())
-                st.rerun()
-    
-    # =====================================================
-    # SHOW MANUAL PREDICTION RESULT
-    # =====================================================
-    if "prediction" in st.session_state and st.session_state.mode == "manual":
-        st.markdown("---")
-        
-        prediction = st.session_state.prediction
-        patient = st.session_state.patient
-        diabetes_prob = st.session_state.diabetes_prob
-        healthy_prob = st.session_state.healthy_prob
-        
-        col1, col2 = st.columns([1, 1])
-        
-        # Prediction Summary
-        with col1:
-            st.subheader("📊 Prediction Result")
-            
-            if prediction == 1:
-                st.error("🔴 **Diabetes Detected**")
-            else:
-                st.success("🟢 **No Diabetes Detected**")
-            
-            if diabetes_prob is not None:
-                col_a, col_b = st.columns(2)
-                
-                with col_a:
-                    st.metric("Diabetes Probability", f"{diabetes_prob:.2f}%")
-                with col_b:
-                    st.metric("Healthy Probability", f"{healthy_prob:.2f}%")
-                
-                # Risk Level
-                risk_level = get_risk_level(diabetes_prob)
-                color = get_risk_color(risk_level)
-                st.markdown(f"**Risk Level:** <span style='color: {color}; font-weight: bold;'>{risk_level}</span>", unsafe_allow_html=True)
-            else:
-                st.info("ℹ️ Probability scores not available for this model.")
-        
-        # Gauge Chart
-        with col2:
-            if diabetes_prob is not None:
-                fig = create_gauge_chart(diabetes_prob)
-                if fig:
-                    st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("ℹ️ Gauge chart not available for this model.")
-        
-        st.markdown("---")
-        
-        # Patient Information
-        st.subheader("👤 Patient Information")
-        st.dataframe(patient, use_container_width=True)
-        
-        st.markdown("---")
-        
-        # Recommendations
-        display_recommendation(prediction)
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #888; font-size: 12px; padding: 20px;'>
+    <p>🔒 Data Privacy Notice: All predictions are computed locally. No data is stored.</p>
+    <p>⚕️ Disclaimer: This tool is for educational purposes only. Always consult healthcare professionals.</p>
+</div>
+""", unsafe_allow_html=True)
