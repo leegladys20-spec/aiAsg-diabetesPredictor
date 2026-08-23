@@ -29,7 +29,7 @@ def load_model():
             model = joblib.load(f)
         
         with open("median_imputer.pkl", "rb") as f:
-            medians = pickle.load(f)
+            medians = joblib.load(f)
         
         # Handle different imputer formats
         if isinstance(medians, dict):
