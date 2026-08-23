@@ -26,7 +26,7 @@ st.set_page_config(
 def load_model():
     try:
         with open("final_model.pkl", "rb") as f:
-            model = pickle.load(f)
+            model = joblib.load(f)
         
         with open("median_imputer.pkl", "rb") as f:
             medians = pickle.load(f)
