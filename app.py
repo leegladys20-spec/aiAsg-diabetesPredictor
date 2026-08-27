@@ -625,17 +625,23 @@ div[data-testid="stRadio"] label {
     font-weight: 600;
 }
 
-/* Updated CSS for Preprocessing Borders and Image Margins */
-div[data-testid="stImage"] {
+/* ============================================= */
+/* Image Margins & Resizing */
+/* ============================================= */
+[data-testid="stImage"] {
+    display: flex;
+    justify-content: center;
     margin: 20px auto !important;
 }
 
-.preprocessing-box {
-    border: 1px solid #d0d5dd;
+[data-testid="stImage"] img {
+    max-width: 85% !important; /* Makes all graph images a little bit smaller */
+    border-radius: 8px;
+}
+
+/* Preprocessing Box Border Adjustment */
+div[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    height: 100%;
     background-color: #ffffff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
@@ -1678,38 +1684,51 @@ def model_insights_page():
             "found and fixed."
         )
 
+        # 1. Zero Value Analysis & NaN Replacement Side-by-Side
         c1, c2 = st.columns(2)
+        
         with c1:
-            st.markdown('<div class="preprocessing-box">', unsafe_allow_html=True)
-            show_insight_plot(
-                "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
-                "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
-            )
-            st.markdown('</div>', unsafe_allow_html=True)
-            
+            with st.container(border=True):
+                show_insight_plot(
+                    "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
+                    "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
+                )
+                
         with c2:
-            st.markdown('<div class="preprocessing-box">', unsafe_allow_html=True)
+            with st.container(border=True):
+                show_insight_plot(
+                    "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
+                    "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
+                )
+                
+        insight_divider()
+
+        # 2. NEW: Stratified Class Distribution
+        with st.container(border=True):
             show_insight_plot(
-                "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
-                "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
+                "Screenshot 2026-08-27 130057_2.png", "📊", "Class Distribution in Training and Testing Sets",
+                "To ensure the machine learning model is evaluated accurately, the dataset was split into Training and Testing sets while strictly preserving the original class distribution. As shown above, this stratified split guarantees that both sets maintain approximately <b>65% non-diabetic</b> and <b>35% diabetic</b> cases. This prevents the model from becoming artificially biased toward the majority class during the training phase."
             )
-            st.markdown('</div>', unsafe_allow_html=True)
+
+        insight_divider()
+
+        # 3. Imputation and Outlier Treatment
+        with st.container(border=True):
+            show_insight_plot(
+                "05_summary_stats_after_imputation.png", "🧮", "Median Imputation",
+                "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
+                "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
+            )
             
         insight_divider()
 
-        show_insight_plot(
-            "05_summary_stats_after_imputation.png", "🧮", "Median Imputation",
-            "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
-            "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
-        )
-        insight_divider()
-
-        show_insight_plot(
-            "06_outlier_detection_treatment.png", "🎯", "Outlier Detection (Local Outlier Factor)",
-            "A Local Outlier Factor model flagged and removed the most abnormal patient records after imputation. "
-            "This step slightly shifted the class distribution (from 34.9% to 34.0% diabetic) by filtering out points "
-            "whose combination of feature values looked nothing like their neighbors, reducing the influence extreme outliers could have on the model."
-        )
+        with st.container(border=True):
+            show_insight_plot(
+                "06_outlier_detection_treatment.png", "🎯", "Outlier Detection (Local Outlier Factor)",
+                "A Local Outlier Factor model flagged and removed the most abnormal patient records after imputation. "
+                "This step slightly shifted the class distribution (from 34.9% to 34.0% diabetic) by filtering out points "
+                "whose combination of feature values looked nothing like their neighbors, reducing the influence extreme outliers could have on the model."
+            )
 
     # =====================================================
     # SECTION 3 — Model Performance
