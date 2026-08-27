@@ -626,18 +626,19 @@ div[data-testid="stRadio"] label {
 }
 
 /* ============================================= */
-/* Image Margins, Sizing & Centering */
+/* Image Margins, Sizing & Strict Centering */
 /* ============================================= */
-[data-testid="stImage"] {
-    display: flex;
+div[data-testid="stImage"] {
+    display: flex !important;
     justify-content: center !important; /* Centers the image */
     align-items: center !important;
     margin: 15px auto 20px auto !important; /* Proper margin size for visual spacing */
-    width: 100%;
+    width: 100% !important;
 }
 
-[data-testid="stImage"] img {
-    max-width: 75% !important; /* Keeps the images noticeably smaller */
+div[data-testid="stImage"] img {
+    max-width: 70% !important; /* Makes images smaller and more suitable */
+    margin: 0 auto !important; /* Forces centering */
     border-radius: 8px;
     object-fit: contain;
 }
@@ -663,7 +664,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         height: 55px !important;
         padding: 15px !important;
     }
-    [data-testid="stImage"] img {
+    div[data-testid="stImage"] img {
         max-width: 100% !important; /* Restores image width on smaller screens */
     }
 }
@@ -1691,7 +1692,7 @@ def model_insights_page():
             "found and fixed."
         )
 
-        # 1. Zero Value Analysis & NaN Replacement wrapped in ONE borderline
+        # 1. Zero Value Analysis & NaN Replacement in SEPARATE border containers
         with st.container(border=True):
             c1, c2 = st.columns(2)
             with c1:
@@ -1708,20 +1709,20 @@ def model_insights_page():
                 
         insight_divider()
 
-        # 2. Median Imputation using the newly provided image
+        # 2. Median Imputation
         with st.container(border=True):
             show_insight_plot(
                 "image_d55835.jpg", "🧮", "Median Imputation",
                 "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
                 "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
             )
-
+            
         insight_divider()
 
-        # 3. Stratified Class Distribution (from previous addition)
+        # 3. Stratified Class Distribution 
         with st.container(border=True):
             show_insight_plot(
-                "Screenshot 2026-08-27 130057_2.png", "📊", "Class Distribution in Training and Testing Sets",
+                "12_train_test_split.png", "📊", "Class Distribution in Training and Testing Sets",
                 "To ensure the machine learning model is evaluated accurately, the dataset was split into Training and Testing sets while strictly preserving the original class distribution. As shown above, this stratified split guarantees that both sets maintain approximately <b>65% non-diabetic</b> and <b>35% diabetic</b> cases. This prevents the model from becoming artificially biased toward the majority class during the training phase."
             )
 
