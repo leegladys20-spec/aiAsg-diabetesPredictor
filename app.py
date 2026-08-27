@@ -583,6 +583,7 @@ div[data-testid="stDownloadButton"] button:hover {
     font-weight: 700;
     color: #1A237E;
     margin: 26px 0 12px 0;
+    text-align: center; /* Center the title too */
 }
 .insight-plot-desc {
     font-size: 16.5px;
@@ -632,13 +633,14 @@ div[data-testid="stImage"] {
     display: flex !important;
     justify-content: center !important; /* Centers the image */
     align-items: center !important;
+    text-align: center !important;
     margin: 15px auto 20px auto !important; /* Proper margin size for visual spacing */
     width: 100% !important;
 }
 
 div[data-testid="stImage"] img {
-    max-width: 70% !important; /* Makes images smaller and more suitable */
-    margin: 0 auto !important; /* Forces centering */
+    max-width: 70% !important; /* Shrinks the images slightly to make them suitable */
+    margin: 0 auto !important; /* Strict centering */
     border-radius: 8px;
     object-fit: contain;
 }
@@ -648,7 +650,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 12px;
     background-color: #ffffff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    padding: 10px 15px; /* Adds internal padding to the border so contents don't touch edges */
+    padding: 15px 20px; /* Internal padding so contents breathe */
 }
 
 /* Responsive */
@@ -1540,7 +1542,8 @@ def show_insight_plot(filename, icon, title, explanation, caption=None):
     st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
-        st.image(path, use_container_width=True, caption=caption)
+        # Setting use_container_width to False lets the CSS handle the smaller width 
+        st.image(path, caption=caption) 
     else:
         st.markdown(f"""
         <div class="insight-missing-box">
@@ -1629,8 +1632,8 @@ def model_insights_page():
         ("🗂️", "768", "Patients in dataset"),
         ("⚖️", "34.9%", "Diabetic cases"),
         ("🌳", "RF (Tuned)", "Deployed model"),
-        ("🎯", "74.7%", "Test accuracy"),
-        ("📈", "0.821", "ROC-AUC score"),
+        ("🎯", "78.6%", "Test accuracy"),
+        ("📈", "0.825", "ROC-AUC score"),
     ]
     cols = st.columns(5)
     for col, (icon, value, label) in zip(cols, quick_stats):
@@ -1666,20 +1669,22 @@ def model_insights_page():
             "Understanding the raw data before any cleaning — 768 patient records, 8 clinical features, "
             "from the Pima Indians Diabetes dataset."
         )
-
-        show_insight_plot(
-            "01_target_distribution.png", "⚖️", "Target Distribution",
-            "The bar chart outlines the class balance of the dataset: <b>500 non-diabetic (65.1%)</b> vs <b>268 diabetic (34.9%)</b> patients. "
-            "Understanding this imbalance is critical as it informs the model training process and dictates why class weights were balanced later in the pipeline."
-        )
+        
+        with st.container(border=True):
+            show_insight_plot(
+                "01_target_distribution.png", "⚖️", "Target Distribution",
+                "The bar chart outlines the class balance of the dataset: <b>500 non-diabetic (65.1%)</b> vs <b>268 diabetic (34.9%)</b> patients. "
+                "Understanding this imbalance is critical as it informs the model training process and dictates why class weights were balanced later in the pipeline."
+            )
         insight_divider()
 
-        show_insight_plot(
-            "04_correlation_analysis.png", "🔗", "Correlation Analysis After Zero-Value Treatment",
-            "This heatmap and bar chart show how every feature relates to the Outcome and each other after treating the impossible zeros. "
-            "<b>Glucose</b> is typically the strongest single predictor of diabetes (correlation 0.49), followed by <b>BMI</b> (0.31), <b>Insulin</b> (0.30), and <b>Age</b> (0.24). "
-            "This pattern is confirmed independently by the Random Forest's own feature importance scores further down this page."
-        )
+        with st.container(border=True):
+            show_insight_plot(
+                "04_correlation_analysis.png", "🔗", "Correlation Analysis After Zero-Value Treatment",
+                "This heatmap and bar chart show how every feature relates to the Outcome and each other after treating the impossible zeros. "
+                "<b>Glucose</b> is typically the strongest single predictor of diabetes (correlation 0.49), followed by <b>BMI</b> (0.31), <b>Insulin</b> (0.30), and <b>Age</b> (0.24). "
+                "This pattern is confirmed independently by the Random Forest's own feature importance scores further down this page."
+            )
 
     # =====================================================
     # SECTION 2 — Preprocessing
@@ -1693,15 +1698,17 @@ def model_insights_page():
         )
 
         # 1. Zero Value Analysis & NaN Replacement in SEPARATE border containers
-        with st.container(border=True):
-            c1, c2 = st.columns(2)
-            with c1:
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            with st.container(border=True):
                 show_insight_plot(
                     "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
                     "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
                 )
                 
-            with c2:
+        with c2:
+            with st.container(border=True):
                 show_insight_plot(
                     "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
                     "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
@@ -1794,13 +1801,14 @@ def model_insights_page():
         # Try to load either 11_roc_curve_2.png or 11_roc_curve.png
         roc_filename = "11_roc_curve_2.png" if os.path.exists("11_roc_curve_2.png") else "11_roc_curve.png"
         
-        show_insight_plot(
-            roc_filename, "📈", "ROC Curves for Tuned Models",
-            "The ROC curve plots true positive rate against false positive "
-            "rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the "
-            "higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across "
-            "the entire range of thresholds, not just the default 50% cutoff. The Tuned Random Forest model demonstrates the highest AUC performance."
-        )
+        with st.container(border=True):
+            show_insight_plot(
+                roc_filename, "📈", "ROC Curves for Tuned Models",
+                "The ROC curve plots true positive rate against false positive "
+                "rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the "
+                "higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across "
+                "the entire range of thresholds, not just the default 50% cutoff. The Tuned Random Forest model demonstrates the highest AUC performance."
+            )
 
     # =====================================================
     # SECTION 4 — Feature Importance
@@ -1810,14 +1818,15 @@ def model_insights_page():
             "🌟 Feature Importance",
             "Which of the 8 health measurements actually drive the Random Forest's predictions?"
         )
-
-        show_insight_plot(
-            "13_feature_importance.png", "🏅", "Feature Ranking",
-            "This ranking is computed directly from how much each feature reduces prediction error across every split in the Random Forest. "
-            "<b>Glucose (~38%)</b> strongly dominates the model's decision-making process. It is followed by <b>BMI (~21%)</b> and <b>Age (~17%)</b>. "
-            "Metrics like <b>Insulin (~9%)</b> and the <b>Diabetes Pedigree Function (~6%)</b> offer moderate value, while <b>Skin Thickness (~4%)</b>, "
-            "<b>Pregnancies (~3%)</b>, and <b>Blood Pressure (~2%)</b> contribute the least to the final prediction."
-        )
+        
+        with st.container(border=True):
+            show_insight_plot(
+                "13_feature_importance.png", "🏅", "Feature Ranking",
+                "This ranking is computed directly from how much each feature reduces prediction error across every split in the Random Forest. "
+                "<b>Glucose (~38%)</b> strongly dominates the model's decision-making process. It is followed by <b>BMI (~21%)</b> and <b>Age (~17%)</b>. "
+                "Metrics like <b>Insulin (~9%)</b> and the <b>Diabetes Pedigree Function (~6%)</b> offer moderate value, while <b>Skin Thickness (~4%)</b>, "
+                "<b>Pregnancies (~3%)</b>, and <b>Blood Pressure (~2%)</b> contribute the least to the final prediction."
+            )
 
     # =====================================================
     # SECTION 5 — Final Comparison
@@ -1828,30 +1837,31 @@ def model_insights_page():
             "After hyperparameter tuning via 5-fold Grid Search, "
             "here's how every candidate stacks up."
         )
-
-        show_insight_plot(
-            "17_final_comparison.png", "🎯", "All Models, All Metrics",
-            "Side-by-side view of Accuracy, Precision, Recall, F1-Score and ROC-AUC for every model tested, "
-            "including the final tuned Random Forest, all on the same 0–1 scale so the trade-offs between "
-            "models are easy to compare at a glance rather than reading five separate numbers per model."
-        )
+        
+        with st.container(border=True):
+            show_insight_plot(
+                "17_final_comparison.png", "🎯", "All Models, All Metrics",
+                "Side-by-side view of Accuracy, Precision, Recall, F1-Score and ROC-AUC for every model tested, "
+                "including the final tuned Random Forest, all on the same 0–1 scale so the trade-offs between "
+                "models are easy to compare at a glance rather than reading five separate numbers per model."
+            )
         insight_divider()
 
         st.markdown('<div class="insight-plot-title">🌳 Deployed Model: Random Forest (Tuned)</div>', unsafe_allow_html=True)
         d1, d2, d3, d4 = st.columns(4)
         with d1:
-            st.metric("Test Accuracy", "74.7%") 
+            st.metric("Test Accuracy", "78.6%") 
         with d2:
-            st.metric("Recall", "XX.X%") # Placeholder until values are known from colab
+            st.metric("Recall", "79.6%") 
         with d3:
-            st.metric("ROC-AUC", "0.821") 
+            st.metric("ROC-AUC", "0.825") 
         with d4:
-            st.metric("Overfitting Gap", "~6.3 pt", help="Train vs Test accuracy gap") 
+            st.metric("F1-Score", "72.3%")
             
         st.markdown(
-            "<div class=\"insight-plot-desc\">Hyperparameter tuning successfully improved the Random Forest's recall and "
-            "significantly reduced its tendency to overfit. The Train-Test accuracy gap dropped noticeably. "
-            "This ensures our deployed model generalizes much better to new, unseen patient data. This tuned model is what's "
+            "<div class=\"insight-plot-desc\">The metrics above highlight the trade-offs each classifier makes. "
+            "The Tuned Random Forest algorithm achieves a Recall of 79.6% and an Accuracy of 78.6%, with an ROC-AUC of 0.825. "
+            "This ensures our deployed model generalizes well to new, unseen patient data. This tuned model is what's "
             "saved as <code>final_model.pkl</code> and powers every single prediction in this app.</div>",
             unsafe_allow_html=True
         )
