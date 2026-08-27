@@ -630,13 +630,16 @@ div[data-testid="stRadio"] label {
 /* ============================================= */
 [data-testid="stImage"] {
     display: flex;
-    justify-content: center !important; /* Forces the image back to the center */
-    margin: 15px auto 20px auto !important; /* Clean margins on top and bottom */
+    justify-content: center !important; /* Centers the image */
+    align-items: center !important;
+    margin: 15px auto 20px auto !important; /* Proper margin size for visual spacing */
+    width: 100%;
 }
 
 [data-testid="stImage"] img {
-    max-width: 85% !important; /* Keeps the images slightly smaller */
+    max-width: 75% !important; /* Keeps the images noticeably smaller */
     border-radius: 8px;
+    object-fit: contain;
 }
 
 /* Preprocessing Box Border Adjustment */
@@ -644,7 +647,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 12px;
     background-color: #ffffff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    padding: 5px;
+    padding: 10px 15px; /* Adds internal padding to the border so contents don't touch edges */
 }
 
 /* Responsive */
@@ -659,6 +662,9 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         font-size: 18px !important;
         height: 55px !important;
         padding: 15px !important;
+    }
+    [data-testid="stImage"] img {
+        max-width: 100% !important; /* Restores image width on smaller screens */
     }
 }
 </style>
@@ -1685,18 +1691,16 @@ def model_insights_page():
             "found and fixed."
         )
 
-        # 1. Zero Value Analysis & NaN Replacement in SEPARATE border containers
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            with st.container(border=True):
+        # 1. Zero Value Analysis & NaN Replacement wrapped in ONE borderline
+        with st.container(border=True):
+            c1, c2 = st.columns(2)
+            with c1:
                 show_insight_plot(
                     "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
                     "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
                 )
                 
-        with c2:
-            with st.container(border=True):
+            with c2:
                 show_insight_plot(
                     "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
                     "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
@@ -1704,23 +1708,23 @@ def model_insights_page():
                 
         insight_divider()
 
-        # 2. Stratified Class Distribution
+        # 2. Median Imputation using the newly provided image
+        with st.container(border=True):
+            show_insight_plot(
+                "image_d55835.jpg", "🧮", "Median Imputation",
+                "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
+                "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
+            )
+
+        insight_divider()
+
+        # 3. Stratified Class Distribution (from previous addition)
         with st.container(border=True):
             show_insight_plot(
                 "Screenshot 2026-08-27 130057_2.png", "📊", "Class Distribution in Training and Testing Sets",
                 "To ensure the machine learning model is evaluated accurately, the dataset was split into Training and Testing sets while strictly preserving the original class distribution. As shown above, this stratified split guarantees that both sets maintain approximately <b>65% non-diabetic</b> and <b>35% diabetic</b> cases. This prevents the model from becoming artificially biased toward the majority class during the training phase."
             )
 
-        insight_divider()
-
-        # 3. Median Imputation
-        with st.container(border=True):
-            show_insight_plot(
-                "05_summary_stats_after_imputation.png", "🧮", "Median Imputation",
-                "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
-                "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
-            )
-            
         insight_divider()
 
         # 4. Outlier Detection
@@ -1835,13 +1839,13 @@ def model_insights_page():
         st.markdown('<div class="insight-plot-title">🌳 Deployed Model: Random Forest (Tuned)</div>', unsafe_allow_html=True)
         d1, d2, d3, d4 = st.columns(4)
         with d1:
-            st.metric("Test Accuracy", "XX.X%") # Placeholder until values are known
+            st.metric("Test Accuracy", "74.7%") 
         with d2:
-            st.metric("Recall", "XX.X%") # Placeholder until values are known
+            st.metric("Recall", "XX.X%") # Placeholder until values are known from colab
         with d3:
-            st.metric("ROC-AUC", "0.XXX") # Placeholder until values are known
+            st.metric("ROC-AUC", "0.821") 
         with d4:
-            st.metric("Overfitting Gap", "~X.X pt", help="Train vs Test accuracy gap") # Placeholder
+            st.metric("Overfitting Gap", "~6.3 pt", help="Train vs Test accuracy gap") 
             
         st.markdown(
             "<div class=\"insight-plot-desc\">Hyperparameter tuning successfully improved the Random Forest's recall and "
