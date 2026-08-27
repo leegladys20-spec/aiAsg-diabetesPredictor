@@ -2016,7 +2016,7 @@ def model_insights_page():
         # -------------------------------------------------
         with st.container(border=True):
             show_insight_plot(
-                "image_d55835.jpg",
+                "05_summary_stats_after_imputation.png",
                 "🧮",
                 "Median Imputation",
                 "The missing values are filled using the <b>median</b> of the "
