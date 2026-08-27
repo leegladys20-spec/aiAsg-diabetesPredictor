@@ -626,16 +626,16 @@ div[data-testid="stRadio"] label {
 }
 
 /* ============================================= */
-/* Image Margins & Resizing */
+/* Image Margins, Sizing & Alignment */
 /* ============================================= */
 [data-testid="stImage"] {
     display: flex;
-    justify-content: center;
-    margin: 20px auto !important;
+    justify-content: flex-start !important; /* Aligns the image to the left */
+    margin: 15px 0px 20px 0px !important; /* Adjusts top and bottom margin size */
 }
 
 [data-testid="stImage"] img {
-    max-width: 85% !important; /* Makes all graph images a little bit smaller */
+    max-width: 90% !important; /* Keeps the image slightly smaller for better visuals */
     border-radius: 8px;
 }
 
@@ -644,6 +644,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 12px;
     background-color: #ffffff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 5px;
 }
 
 /* Responsive */
@@ -1684,18 +1685,16 @@ def model_insights_page():
             "found and fixed."
         )
 
-        # 1. Zero Value Analysis & NaN Replacement Side-by-Side
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            with st.container(border=True):
+        # 1. Zero Value Analysis & NaN Replacement wrapped in ONE borderline
+        with st.container(border=True):
+            c1, c2 = st.columns(2)
+            with c1:
                 show_insight_plot(
                     "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
                     "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
                 )
                 
-        with c2:
-            with st.container(border=True):
+            with c2:
                 show_insight_plot(
                     "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
                     "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
@@ -1703,7 +1702,17 @@ def model_insights_page():
                 
         insight_divider()
 
-        # 2. NEW: Stratified Class Distribution
+        # 2. Median Imputation using the newly provided image
+        with st.container(border=True):
+            show_insight_plot(
+                "image_d55835.jpg", "🧮", "Median Imputation",
+                "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
+                "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
+            )
+
+        insight_divider()
+
+        # 3. Stratified Class Distribution (from previous addition)
         with st.container(border=True):
             show_insight_plot(
                 "Screenshot 2026-08-27 130057_2.png", "📊", "Class Distribution in Training and Testing Sets",
@@ -1712,16 +1721,7 @@ def model_insights_page():
 
         insight_divider()
 
-        # 3. Imputation and Outlier Treatment
-        with st.container(border=True):
-            show_insight_plot(
-                "05_summary_stats_after_imputation.png", "🧮", "Median Imputation",
-                "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
-                "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
-            )
-            
-        insight_divider()
-
+        # 4. Outlier Detection
         with st.container(border=True):
             show_insight_plot(
                 "06_outlier_detection_treatment.png", "🎯", "Outlier Detection (Local Outlier Factor)",
