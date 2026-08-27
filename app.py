@@ -639,8 +639,9 @@ div[data-testid="stImage"] {
 }
 
 div[data-testid="stImage"] > img {
-    width: 80% !important; /* Shrinks the images slightly to make them suitable */
-    margin: 0 auto !important; /* Strict centering */
+    max-width: 80% !important; /* Shrinks the images slightly to make them suitable */
+    margin: 0 auto !important; /* Strict centering on full width */
+    display: block !important; /* Forces block display to obey margin auto */
     border-radius: 8px;
     object-fit: contain;
 }
@@ -667,7 +668,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         padding: 15px !important;
     }
     div[data-testid="stImage"] > img {
-        width: 100% !important; /* Restores image width on smaller screens */
+        max-width: 100% !important; /* Restores image width on smaller screens */
     }
 }
 </style>
