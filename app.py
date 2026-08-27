@@ -627,23 +627,50 @@ div[data-testid="stRadio"] label {
 }
 
 /* ============================================= */
-/* Image Margins, Sizing & Strict Centering */
+/* Model Insight Images - Consistent Centering */
 /* ============================================= */
+.insight-image-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 12px auto 20px auto;
+}
+
+.insight-image-wrap img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 620px;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.07);
+}
+
 div[data-testid="stImage"] {
     display: flex !important;
-    justify-content: center !important; /* Centers the image */
+    justify-content: center !important;
     align-items: center !important;
     text-align: center !important;
-    margin: 15px auto 20px auto !important; /* Proper margin size for visual spacing */
+    margin: 10px auto 18px auto !important;
     width: 100% !important;
 }
 
-div[data-testid="stImage"] > img {
-    max-width: 80% !important; /* Shrinks the images slightly to make them suitable */
-    margin: 0 auto !important; /* Strict centering on full width */
-    display: block !important; /* Forces block display to obey margin auto */
-    border-radius: 8px;
-    object-fit: contain;
+div[data-testid="stImage"] img {
+    display: block !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+    border-radius: 12px !important;
+}
+
+.insight-image-caption {
+    text-align: center;
+    color: #777;
+    font-size: 13px;
+    margin-top: -8px;
 }
 
 /* Preprocessing Box Border Adjustment */
@@ -684,20 +711,20 @@ def validate_required_fields(glucose, blood_pressure, bmi, age, dpf, skin, insul
     if pregnancies < 0 or pregnancies > 20:
         errors.append("Pregnancies must be between 0 and 20.")
     
-    if glucose <= 0 or glucose > 300:  # Reject 0
-        errors.append("Glucose must be between 1 and 300 mg/dL.")
+    if glucose < 0 or glucose > 300:
+        errors.append("Glucose must be between 0 and 300 mg/dL. A value of 0 will be treated as missing and replaced with the training median.")
     
-    if blood_pressure <= 0 or blood_pressure > 200:  # Reject 0
-        errors.append("Blood Pressure must be between 1 and 200 mmHg.")
+    if blood_pressure < 0 or blood_pressure > 200:
+        errors.append("Blood Pressure must be between 0 and 200 mmHg. A value of 0 will be treated as missing and replaced with the training median.")
     
-    if skin <= 0 or skin > 99:  # Reject 0
-        errors.append("Skin Thickness must be between 1 and 99 mm.")
+    if skin < 0 or skin > 99:
+        errors.append("Skin Thickness must be between 0 and 99 mm. A value of 0 will be treated as missing and replaced with the training median.")
     
     if insulin < 0 or insulin > 900:
         errors.append("Insulin must be between 0 and 900 mu U/ml.")
     
-    if bmi <= 0 or bmi > 100:
-        errors.append("BMI must be between 0.1 and 100 kg/m².")
+    if bmi < 0 or bmi > 100:
+        errors.append("BMI must be between 0 and 100 kg/m². A value of 0 will be treated as missing and replaced with the training median.")
     
     if age < 1 or age > 120:
         errors.append("Age must be between 1 and 120 years.")
@@ -911,35 +938,35 @@ def validate_uploaded_data(df):
     if not invalid_preg.empty:
         errors.append(f"⚠️ Pregnancies must be between 0 and 20. Found {len(invalid_preg)} invalid rows.")
     
-    # Glucose: 1-300 (0 is NOT allowed)
-    invalid_glucose = df[(df['Glucose'] <= 0) | (df['Glucose'] > 300)]
+    # Glucose: 0-300 (0 is treated as missing and replaced by the training median)
+    invalid_glucose = df[(df['Glucose'] < 0) | (df['Glucose'] > 300)]
     if not invalid_glucose.empty:
-        errors.append(f"⚠️ Glucose must be between 1 and 300 mg/dL. Found {len(invalid_glucose)} invalid rows with 0 or negative values.")
+        errors.append(f"⚠️ Glucose must be between 0 and 300 mg/dL. Found {len(invalid_glucose)} invalid rows.")
     
-    # BloodPressure: 1-200 (0 is NOT allowed)
-    invalid_bp = df[(df['BloodPressure'] <= 0) | (df['BloodPressure'] > 200)]
+    # BloodPressure: 0-200 (0 is treated as missing and replaced by the training median)
+    invalid_bp = df[(df['BloodPressure'] < 0) | (df['BloodPressure'] > 200)]
     if not invalid_bp.empty:
-        errors.append(f"⚠️ Blood Pressure must be between 1 and 200 mmHg. Found {len(invalid_bp)} invalid rows with 0 or negative values.")
+        errors.append(f"⚠️ Blood Pressure must be between 0 and 200 mmHg. Found {len(invalid_bp)} invalid rows.")
     
-    # SkinThickness: 1-99 (0 is NOT allowed)
-    invalid_skin = df[(df['SkinThickness'] <= 0) | (df['SkinThickness'] > 99)]
+    # SkinThickness: 0-99 (0 is treated as missing and replaced by the training median)
+    invalid_skin = df[(df['SkinThickness'] < 0) | (df['SkinThickness'] > 99)]
     if not invalid_skin.empty:
-        errors.append(f"⚠️ Skin Thickness must be between 1 and 99 mm. Found {len(invalid_skin)} invalid rows with 0 or negative values.")
+        errors.append(f"⚠️ Skin Thickness must be between 0 and 99 mm. Found {len(invalid_skin)} invalid rows.")
     
-    # Insulin: 1-900 (0 is NOT allowed — treated as missing, same as Glucose/BP/Skin/BMI)
-    invalid_insulin = df[(df['Insulin'] <= 0) | (df['Insulin'] > 900)]
+    # Insulin: 0-900 (0 is treated as missing and replaced by the training median)
+    invalid_insulin = df[(df['Insulin'] < 0) | (df['Insulin'] > 900)]
     if not invalid_insulin.empty:
-        errors.append(f"⚠️ Insulin must be between 1 and 900 mu U/ml. Found {len(invalid_insulin)} invalid rows with 0 or negative values.")
+        errors.append(f"⚠️ Insulin must be between 0 and 900 mu U/ml. Found {len(invalid_insulin)} invalid rows.")
     
-    # BMI: 0.1-100
-    invalid_bmi = df[(df['BMI'] <= 0) | (df['BMI'] > 100)]
+    # BMI: 0-100 (0 is treated as missing and replaced by the training median)
+    invalid_bmi = df[(df['BMI'] < 0) | (df['BMI'] > 100)]
     if not invalid_bmi.empty:
-        errors.append(f"⚠️ BMI must be between 0.1 and 100 kg/m². Found {len(invalid_bmi)} invalid rows with 0 or negative values.")
+        errors.append(f"⚠️ BMI must be between 0 and 100 kg/m². Found {len(invalid_bmi)} invalid rows.")
     
-    # DiabetesPedigreeFunction: 0.01-3.0
-    invalid_dpf = df[(df['DiabetesPedigreeFunction'] <= 0) | (df['DiabetesPedigreeFunction'] > 3)]
+    # DiabetesPedigreeFunction: 0-3.0
+    invalid_dpf = df[(df['DiabetesPedigreeFunction'] < 0) | (df['DiabetesPedigreeFunction'] > 3)]
     if not invalid_dpf.empty:
-        errors.append(f"⚠️ Diabetes Pedigree Function must be between 0.01 and 3.0. Found {len(invalid_dpf)} invalid rows with 0 or negative values.")
+        errors.append(f"⚠️ Diabetes Pedigree Function must be between 0 and 3.0. Found {len(invalid_dpf)} invalid rows.")
     
     # Age: 1-120
     invalid_age = df[(df['Age'] < 1) | (df['Age'] > 120)]
@@ -981,29 +1008,39 @@ def predict_patient_manual(patient_data):
         return None, None, None, None
 
 def predict_patient_upload(patient_data):
-    """Make prediction for upload data - NO zero replacement."""
+    """Make prediction for uploaded data with the same zero-to-median treatment."""
     try:
-        # Feed raw (unscaled) values directly -- matches training logic provided
-        patient_values = patient_data.values if hasattr(patient_data, "values") else patient_data
-        prediction = model.predict(patient_values)[0]
-        
-        # Get probability if available
+        patient_df = patient_data.copy()
+
+        zero_columns = [
+            "Glucose",
+            "BloodPressure",
+            "SkinThickness",
+            "Insulin",
+            "BMI"
+        ]
+
+        patient_processed = replace_zero_values(patient_df, zero_columns)
+
+        # Feed the processed values to the deployed model.
+        prediction = model.predict(patient_processed)[0]
+
         if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(patient_values)[0]
+            probability = model.predict_proba(patient_processed)[0]
             diabetes_prob = probability[1] * 100
             healthy_prob = probability[0] * 100
         else:
             diabetes_prob = None
             healthy_prob = None
-        
-        # Flatten raw values for debug display
-        raw_values = list(patient_values[0]) if hasattr(patient_values, "__getitem__") else None
-        
+
+        raw_values = list(patient_processed.iloc[0].values)
+
         return prediction, diabetes_prob, healthy_prob, raw_values
-    
+
     except Exception as e:
         st.error(f"Error making prediction: {e}")
         return None, None, None, None
+
 
 # =====================================================
 # BMI Calculator Component
@@ -1534,52 +1571,167 @@ def history_page():
 
 
 # =====================================================
-# Model Insights Helper Functions (NEW)
+# Model Insights Helper Functions
 # =====================================================
-PLOTS_DIR = "" # Current directory based on your filenames
 
-def show_insight_plot(filename, icon, title, explanation, caption=None):
-    """Render one training-notebook chart with a title + plain-language explanation."""
-    st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
+# The training notebook is the source of truth for the figures and values
+# shown on this page.
+PLOTS_DIR = ""
+
+# Exact values produced by the supplied training notebook
+NOTEBOOK_ZERO_COUNTS = {
+    "Glucose": 5,
+    "BloodPressure": 35,
+    "SkinThickness": 227,
+    "Insulin": 374,
+    "BMI": 11
+}
+
+NOTEBOOK_DATASET_ROWS = 768
+NOTEBOOK_DATASET_COLUMNS = 9
+NOTEBOOK_TEST_SIZE = 154
+
+NOTEBOOK_METRICS = {
+    "Tuned KNN": {
+        "Accuracy": 0.7208,
+        "Precision": 0.6170,
+        "Recall": 0.5370,
+        "F1-score": 0.5743,
+        "ROC-AUC": 0.7943
+    },
+    "Tuned SVM": {
+        "Accuracy": 0.7208,
+        "Precision": 0.5821,
+        "Recall": 0.7222,
+        "F1-score": 0.6446,
+        "ROC-AUC": 0.8105
+    },
+    "Tuned Random Forest": {
+        "Accuracy": 0.7857,
+        "Precision": 0.6615,
+        "Recall": 0.7963,
+        "F1-score": 0.7227,
+        "ROC-AUC": 0.8250
+    }
+}
+
+NOTEBOOK_CV = {
+    "Tuned Random Forest": {
+        "CV Recall": 0.7474,
+        "CV F1-score": 0.7018,
+        "CV ROC-AUC": 0.8365,
+        "Average Rank": 1.3333,
+        "Overall Rank": 1
+    },
+    "Tuned SVM": {
+        "CV Recall": 0.7850,
+        "CV F1-score": 0.6982,
+        "CV ROC-AUC": 0.8321,
+        "Average Rank": 1.6667,
+        "Overall Rank": 2
+    },
+    "Tuned KNN": {
+        "CV Recall": 0.5986,
+        "CV F1-score": 0.6495,
+        "CV ROC-AUC": 0.8279,
+        "Average Rank": 3.0000,
+        "Overall Rank": 3
+    }
+}
+
+NOTEBOOK_FEATURE_IMPORTANCE = {
+    "Glucose": 0.4083,
+    "BMI": 0.1697,
+    "Age": 0.1356,
+    "Insulin": 0.0833,
+    "DiabetesPedigreeFunction": 0.0792,
+    "SkinThickness": 0.0443,
+    "BloodPressure": 0.0414,
+    "Pregnancies": 0.0382
+}
+
+
+def show_insight_plot(filename, icon, title, explanation, caption=None, max_width=900):
+    """Render one insight image centered at a consistent, readable size."""
+    st.markdown(
+        f'<div class="insight-plot-title">{icon} {title}</div>',
+        unsafe_allow_html=True
+    )
+
     path = os.path.join(PLOTS_DIR, filename)
+
     if os.path.exists(path):
-        # Allow custom CSS to handle centering and scaling
-        st.image(path, caption=caption)
+        # A centered 3-column layout prevents the image from sticking to the left.
+        left, center, right = st.columns([1, 3, 1])
+        with center:
+            st.image(path, width=max_width)
+            if caption:
+                st.markdown(
+                    f'<div class="insight-image-caption">{caption}</div>',
+                    unsafe_allow_html=True
+                )
     else:
-        st.markdown(f"""
-        <div class="insight-missing-box">
-            📁 <b>{filename}</b> wasn't found.<br>
-            <span style="font-size:12.5px;">Please ensure the image file is placed next to <code>app.py</code>.</span>
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown(f'<div class="insight-plot-desc">{explanation}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="insight-missing-box">
+                📁 <b>{filename}</b> wasn't found.<br>
+                <span style="font-size:12.5px;">
+                    Please ensure the image file is placed next to <code>app.py</code>.
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.markdown(
+        f'<div class="insight-plot-desc">{explanation}</div>',
+        unsafe_allow_html=True
+    )
+
+
+def show_insight_plot_slot(filename, caption=None, max_width=330):
+    """Render a centered image inside a multi-column layout."""
+    path = os.path.join(PLOTS_DIR, filename)
+
+    if os.path.exists(path):
+        # Keep each confusion matrix visually balanced inside its column.
+        st.markdown('<div class="insight-image-wrap">', unsafe_allow_html=True)
+        st.image(path, width=max_width, caption=caption)
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(
+            f'<div class="insight-missing-box">📁 {filename}<br>not found</div>',
+            unsafe_allow_html=True
+        )
+
 
 def insight_divider(margin=None):
-    """A simple dotted-line separator between chart blocks."""
+    """A simple dotted-line separator between insight blocks."""
     style = f' style="margin:{margin};"' if margin else ""
-    st.markdown(f'<hr class="insight-divider"{style}>', unsafe_allow_html=True)
+    st.markdown(
+        f'<hr class="insight-divider"{style}>',
+        unsafe_allow_html=True
+    )
 
-def show_insight_plot_slot(filename, caption=None):
-    """Render just the image (or placeholder) for use inside multi-column layouts."""
-    path = os.path.join(PLOTS_DIR, filename)
-    if os.path.exists(path):
-        st.image(path, caption=caption)
-    else:
-        st.markdown(f'<div class="insight-missing-box">📁 {filename}<br>not found</div>', unsafe_allow_html=True)
 
 def insight_group_header(title, subtitle):
-    st.markdown(f"""
-    <div class="insight-section-header">{title}</div>
-    <div class="insight-section-sub">{subtitle}</div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="insight-section-header">{title}</div>
+        <div class="insight-section-sub">{subtitle}</div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 def _set_insights_section(section_name):
-    """Callback for the Back/Next navigation buttons below each section."""
+    """Callback for the Back/Next navigation buttons."""
     st.session_state["insights_section"] = section_name
     st.session_state["insights_scroll_top"] = True
 
+
 def _scroll_insights_to_top():
-    """Force the browser back to the top of the page when navigating."""
+    """Force the browser back to the top when navigating sections."""
     if st.session_state.get("insights_scroll_top"):
         st.session_state["insights_scroll_top"] = False
         nonce = uuid.uuid4().hex
@@ -1594,6 +1746,7 @@ def _scroll_insights_to_top():
                         w.scrollTo(0, 0);
                         doc.documentElement.scrollTop = 0;
                         doc.body.scrollTop = 0;
+
                         var selectors = [
                             'section.main',
                             '[data-testid="stMain"]',
@@ -1601,12 +1754,16 @@ def _scroll_insights_to_top():
                             '[data-testid="stAppViewContainer"] > div',
                             '.main .block-container'
                         ];
-                        selectors.forEach(function (sel) {{
+
+                        selectors.forEach(function(sel) {{
                             var el = doc.querySelector(sel);
-                            if (el) {{ el.scrollTop = 0; }}
+                            if (el) {{
+                                el.scrollTop = 0;
+                            }}
                         }});
                     }} catch (e) {{}}
                 }}
+
                 scrollAppToTop();
                 setTimeout(scrollAppToTop, 50);
                 setTimeout(scrollAppToTop, 150);
@@ -1614,42 +1771,61 @@ def _scroll_insights_to_top():
                 setTimeout(scrollAppToTop, 600);
             </script>
             """,
-            height=0,
+            height=0
         )
 
-def model_insights_page():
-    """NEW PAGE: shows every chart produced by the Training Notebook."""
 
-    st.markdown("<h1 class='main-title'>📈 Model Insights & Visualizations</h1>", unsafe_allow_html=True)
-    _scroll_insights_to_top()
+def model_insights_page():
+    """Display the training notebook results in a clear, presentation-ready layout."""
+
     st.markdown(
-        "<p class='sub-title'>A behind-the-scenes look at the data, the cleaning steps, and the model "
-        "evaluation behind this app — straight from the training notebook.</p>",
+        "<h1 class='main-title'>📈 Model Insights & Visualizations</h1>",
         unsafe_allow_html=True
     )
 
-    # ---- Quick stats strip ----
+    _scroll_insights_to_top()
+
+    st.markdown(
+        "<p class='sub-title'>A behind-the-scenes look at the data, preprocessing, "
+        "model evaluation and feature importance from the training notebook.</p>",
+        unsafe_allow_html=True
+    )
+
+    # -----------------------------------------------------
+    # Quick statistics
+    # -----------------------------------------------------
     quick_stats = [
-        ("🗂️", "768", "Patients in dataset"),
+        ("🗂️", "768", "Patient records"),
         ("⚖️", "34.9%", "Diabetic cases"),
-        ("🌳", "RF (Tuned)", "Deployed model"),
-        ("🎯", "78.6%", "Test accuracy"),
-        ("📈", "0.825", "ROC-AUC score"),
+        ("🌳", "RF (Tuned)", "Selected model"),
+        ("🎯", "78.57%", "Test accuracy"),
+        ("📈", "0.8250", "Test ROC-AUC")
     ]
+
     cols = st.columns(5)
+
     for col, (icon, value, label) in zip(cols, quick_stats):
         with col:
-            st.markdown(f"""
-            <div class="insight-stat-card">
-                <div class="insight-stat-icon">{icon}</div>
-                <div class="insight-stat-value">{value}</div>
-                <div class="insight-stat-label">{label}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="insight-stat-card">
+                    <div class="insight-stat-icon">{icon}</div>
+                    <div class="insight-stat-value">{value}</div>
+                    <div class="insight-stat-label">{label}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
-    insights_sections = ["🔍 EDA", "🧹 Preprocessing", "🤖 Model Performance", "🌟 Feature Importance", "🏆 Final Comparison"]
+    insights_sections = [
+        "🔍 EDA",
+        "🧹 Preprocessing",
+        "🤖 Model Performance",
+        "🌟 Feature Importance",
+        "🏆 Final Comparison"
+    ]
 
     section = st.radio(
         "Section",
@@ -1662,215 +1838,472 @@ def model_insights_page():
     st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
 
     # =====================================================
-    # SECTION 1 — Exploratory Data Analysis
+    # SECTION 1 — EDA
     # =====================================================
     if section == "🔍 EDA":
+
         insight_group_header(
             "🔍 Exploratory Data Analysis",
-            "Understanding the raw data before any cleaning — 768 patient records, 8 clinical features, "
-            "from the Pima Indians Diabetes dataset."
+            "Understanding the original dataset before preprocessing."
         )
-        
+
         with st.container(border=True):
             show_insight_plot(
-                "01_target_distribution.png", "⚖️", "Target Distribution",
-                "The bar chart outlines the class balance of the dataset: <b>500 non-diabetic (65.1%)</b> vs <b>268 diabetic (34.9%)</b> patients. "
-                "Understanding this imbalance is critical as it informs the model training process and dictates why class weights were balanced later in the pipeline."
+                "01_target_distribution.png",
+                "⚖️",
+                "Target Distribution",
+                "The dataset contains <b>768 patient records</b>. "
+                "There are <b>500 non-diabetic cases (65.1%)</b> and "
+                "<b>268 diabetic cases (34.9%)</b>. "
+                "The outcome is therefore imbalanced toward the non-diabetic class, "
+                "which is why the training pipeline uses class balancing."
             )
+
         insight_divider()
 
         with st.container(border=True):
             show_insight_plot(
-                "04_correlation_analysis.png", "🔗", "Correlation Analysis After Zero-Value Treatment",
-                "This heatmap and bar chart show how every feature relates to the Outcome and each other after treating the impossible zeros. "
-                "<b>Glucose</b> is typically the strongest single predictor of diabetes (correlation 0.49), followed by <b>BMI</b> (0.31), <b>Insulin</b> (0.30), and <b>Age</b> (0.24). "
-                "This pattern is confirmed independently by the Random Forest's own feature importance scores further down this page."
+                "04_correlation_analysis.png",
+                "🔗",
+                "Correlation Analysis After Zero-Value Treatment",
+                "After treating the physiologically impossible zero values as missing, "
+                "the notebook shows that <b>Glucose</b> has the strongest correlation "
+                "with Outcome at approximately <b>0.49</b>, followed by "
+                "<b>BMI (0.31)</b>, <b>Insulin (0.30)</b>, and <b>Age (0.24)</b>. "
+                "Correlation describes association with the target; it does not prove causation."
             )
 
     # =====================================================
-    # SECTION 2 — Preprocessing
+    # SECTION 2 — PREPROCESSING
     # =====================================================
     elif section == "🧹 Preprocessing":
+
         insight_group_header(
             "🧹 Data Cleaning & Preprocessing",
-            "In this dataset, a value of 0 for certain metrics (Glucose, Blood Pressure, Skin Thickness, Insulin, or BMI) isn't "
-            "physiologically possible — it means the value was never recorded. Here's how those hidden gaps were "
-            "found and fixed."
+            "The notebook treats selected zero values as missing observations, "
+            "then applies median imputation, standardisation and LOF-based outlier filtering."
         )
 
-        # 1. Zero Value Analysis 
+        # -------------------------------------------------
+        # 1. ZERO VALUE ANALYSIS — SEPARATE BLOCK
+        # -------------------------------------------------
         with st.container(border=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                show_insight_plot(
-                    "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
-                    "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
-                )
-                
-            with c2:
-                show_insight_plot(
-                    "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
-                    "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
-                )
-                
-        insight_divider()
 
-        # 2. Median Imputation
-        with st.container(border=True):
-            show_insight_plot(
-                "image_d55835.jpg", "🧮", "Median Imputation",
-                "The NaN values were filled with the <b>median</b> of each respective column to avoid skewing by extreme outliers. "
-                "The resulting medians are saved in the <code>imputer.pkl</code> file, which is actively utilized by this app to process any 0 values provided in the manual inputs."
-            )
-            
-        insight_divider()
-
-        # 3. Stratified Class Distribution 
-        with st.container(border=True):
-            show_insight_plot(
-                "12_train_test_split.png", "📊", "Class Distribution in Training and Testing Sets",
-                "To ensure the machine learning model is evaluated accurately, the dataset was split into Training and Testing sets while strictly preserving the original class distribution. As shown above, this stratified split guarantees that both sets maintain approximately <b>65% non-diabetic</b> and <b>35% diabetic</b> cases. This prevents the model from becoming artificially biased toward the majority class during the training phase."
-            )
-
-        insight_divider()
-
-        # 4. Outlier Detection
-        with st.container(border=True):
-            show_insight_plot(
-                "06_outlier_detection_treatment.png", "🎯", "Outlier Detection (Local Outlier Factor)",
-                "A Local Outlier Factor model flagged and removed the most abnormal patient records after imputation. "
-                "This step slightly shifted the class distribution (from 34.9% to 34.0% diabetic) by filtering out points "
-                "whose combination of feature values looked nothing like their neighbors, reducing the influence extreme outliers could have on the model."
-            )
-
-    # =====================================================
-    # SECTION 3 — Model Performance
-    # =====================================================
-    elif section == "🤖 Model Performance":
-        insight_group_header(
-            "🤖 Model Performance",
-            "Comparing the algorithms evaluated head-to-head on the test set."
-        )
-
-        st.markdown('<div class="insight-plot-title">📋 Tuned Model Performance Comparison</div>', unsafe_allow_html=True)
-        
-        try:
-            if os.path.exists("model_comparison_results_2.csv"):
-                base_results = pd.read_csv("model_comparison_results_2.csv")
-            else:
-                base_results = pd.read_csv("model_comparison_results.csv")
-                
-            metric_cols = ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
-            valid_cols = [c for c in metric_cols if c in base_results.columns]
-            
-            st.dataframe(base_results, use_container_width=True, hide_index=True)
-            
-        except Exception as e:
             st.markdown(
-                f'<div class="insight-missing-box">📁 <b>model_comparison_results_2.csv</b> wasn\'t found or couldn\'t be loaded. '
-                f'Error: {str(e)}</div>', 
+                '<div class="insight-plot-title">🕳️ Zero Value Analysis</div>',
                 unsafe_allow_html=True
             )
 
-        st.markdown(
-            '<div class="insight-plot-desc">The metrics above highlight the trade-offs each classifier makes between Precision (correctly flagging diabetic patients) '
-            'and Recall (detecting as many true diabetic cases as possible). The Tuned Random Forest algorithm historically leads on most core metrics.</div>',
-            unsafe_allow_html=True
-        )
+            st.markdown(
+                '<div class="insight-plot-desc">'
+                "The original dataset contains zeros in five clinical measurements "
+                "that are treated as missing rather than genuine measurements. "
+                "The notebook reports the following counts:"
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+            z1, z2, z3, z4, z5 = st.columns(5)
+
+            zero_cards = [
+                (z1, "Glucose", "5"),
+                (z2, "Blood Pressure", "35"),
+                (z3, "Skin Thickness", "227"),
+                (z4, "Insulin", "374"),
+                (z5, "BMI", "11")
+            ]
+
+            for col, name, value in zero_cards:
+                with col:
+                    st.markdown(
+                        f"""
+                        <div class="insight-stat-card">
+                            <div class="insight-stat-icon">0</div>
+                            <div class="insight-stat-value">{value}</div>
+                            <div class="insight-stat-label">{name} zeros</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+            st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+
+            show_insight_plot(
+                "02_zero_value_analysis.png",
+                "",
+                "Zero Counts by Feature",
+                "The exact zero counts from the notebook are "
+                "<b>Glucose = 5</b>, <b>Blood Pressure = 35</b>, "
+                "<b>Skin Thickness = 227</b>, <b>Insulin = 374</b>, and "
+                "<b>BMI = 11</b>. Pregnancies and Outcome are not included in "
+                "this missing-value treatment."
+            )
+
         insight_divider()
 
-        st.markdown('<div class="insight-plot-title">🧩 Confusion Matrices</div>', unsafe_allow_html=True)
-        cm1, cm2, cm3 = st.columns(3)
-        with cm1:
-            show_insight_plot_slot("10_confusion_matrix_knn.png")
-        with cm2:
-            show_insight_plot_slot("10_confusion_matrix_svm.png")
-        with cm3:
-            show_insight_plot_slot("10_confusion_matrix_random_forest.png")
-        st.markdown(
-            '<div class="insight-plot-desc">Each matrix shows correct vs incorrect predictions on the '
-            '146-patient test set: true negatives and true positives sit on the diagonal, while false '
-            'positives and false negatives sit off it.</div>',
-            unsafe_allow_html=True
-        )
+        # -------------------------------------------------
+        # 2. REPLACING ZEROS WITH NaN — SEPARATE BLOCK
+        # -------------------------------------------------
+        with st.container(border=True):
+
+            st.markdown(
+                '<div class="insight-plot-title">🔄 Replacing Zeros with NaN</div>',
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                '<div class="insight-plot-desc">'
+                "The notebook replaces the selected zero values with "
+                "<b>NaN (Not a Number)</b>. This makes the hidden missing observations "
+                "explicit before imputation. Importantly, the NaN conversion does "
+                "not delete the records; it changes only the affected cell values."
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+            show_insight_plot(
+                "03_missing_values.png",
+                "NaN",
+                "Missing Values After Zero-to-NaN Conversion",
+                "After conversion, the missing-value counts are "
+                "<b>Glucose = 5</b>, <b>Blood Pressure = 35</b>, "
+                "<b>Skin Thickness = 227</b>, <b>Insulin = 374</b>, and "
+                "<b>BMI = 11</b>. The remaining columns have zero missing values "
+                "at this stage."
+            )
+
         insight_divider()
 
-        roc_filename = "11_roc_curve_2.png" if os.path.exists("11_roc_curve_2.png") else "11_roc_curve.png"
-        
+        # -------------------------------------------------
+        # 3. MEDIAN IMPUTATION
+        # -------------------------------------------------
         with st.container(border=True):
             show_insight_plot(
-                roc_filename, "📈", "ROC Curves for Tuned Models",
-                "The ROC curve plots true positive rate against false positive "
-                "rate at every possible decision threshold. The closer a curve hugs the top-left corner (and the "
-                "higher the shaded AUC), the better the model separates diabetic from non-diabetic patients across "
-                "the entire range of thresholds, not just the default 50% cutoff. The Tuned Random Forest model demonstrates the highest AUC performance."
+                "image_d55835.jpg",
+                "🧮",
+                "Median Imputation",
+                "The missing values are filled using the <b>median</b> of the "
+                "corresponding feature. Median imputation is less affected by extreme "
+                "values than mean imputation. The notebook's machine-learning "
+                "pipelines perform imputation within the training workflow."
+            )
+
+        insight_divider()
+
+        # -------------------------------------------------
+        # 4. STRATIFIED TRAIN/TEST SPLIT
+        # -------------------------------------------------
+        with st.container(border=True):
+            show_insight_plot(
+                "12_train_test_split.png",
+                "📊",
+                "Stratified Training and Testing Sets",
+                "The notebook uses a stratified train/test split so the class proportions "
+                "are preserved as closely as possible between training and testing data. "
+                "The final test set contains <b>154 observations</b>, consisting of "
+                "<b>100 non-diabetic</b> and <b>54 diabetic</b> cases."
+            )
+
+        insight_divider()
+
+        # -------------------------------------------------
+        # 5. OUTLIER DETECTION
+        # -------------------------------------------------
+        with st.container(border=True):
+            show_insight_plot(
+                "06_outlier_detection_treatment.png",
+                "🎯",
+                "Outlier Detection with Local Outlier Factor",
+                "The notebook applies <b>Local Outlier Factor (LOF)</b> after imputation "
+                "and standardisation. LOF identifies observations whose local density "
+                "differs substantially from their neighbours. The notebook reports that "
+                "the diabetic proportion changes from <b>34.9%</b> before filtering to "
+                "approximately <b>34.0%</b> after the outlier-treatment step."
             )
 
     # =====================================================
-    # SECTION 4 — Feature Importance
+    # SECTION 3 — MODEL PERFORMANCE
+    # =====================================================
+    elif section == "🤖 Model Performance":
+
+        insight_group_header(
+            "🤖 Model Performance",
+            "Final test-set performance of the three tuned classifiers from the notebook."
+        )
+
+        with st.container(border=True):
+
+            st.markdown(
+                '<div class="insight-plot-title">📋 Tuned Model Performance Comparison</div>',
+                unsafe_allow_html=True
+            )
+
+            comparison_display = pd.DataFrame([
+                {
+                    "Model": "Tuned KNN",
+                    "Accuracy": "72.08%",
+                    "Precision": "61.70%",
+                    "Recall": "53.70%",
+                    "F1-score": "57.43%",
+                    "ROC-AUC": "0.7943"
+                },
+                {
+                    "Model": "Tuned SVM",
+                    "Accuracy": "72.08%",
+                    "Precision": "58.21%",
+                    "Recall": "72.22%",
+                    "F1-score": "64.46%",
+                    "ROC-AUC": "0.8105"
+                },
+                {
+                    "Model": "Tuned Random Forest",
+                    "Accuracy": "78.57%",
+                    "Precision": "66.15%",
+                    "Recall": "79.63%",
+                    "F1-score": "72.27%",
+                    "ROC-AUC": "0.8250"
+                }
+            ])
+
+            st.dataframe(
+                comparison_display,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            st.markdown(
+                '<div class="insight-plot-desc">'
+                "The tuned Random Forest has the strongest overall test performance "
+                "among the three tuned models: <b>78.57% accuracy</b>, "
+                "<b>79.63% recall</b>, <b>72.27% F1-score</b>, and "
+                "<b>0.8250 ROC-AUC</b>. Recall is especially important here because "
+                "it measures how many actual diabetic cases were correctly identified."
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+        insight_divider()
+
+        # Confusion matrices
+        with st.container(border=True):
+
+            st.markdown(
+                '<div class="insight-plot-title">🧩 Confusion Matrices</div>',
+                unsafe_allow_html=True
+            )
+
+            cm1, cm2, cm3 = st.columns(3)
+
+            with cm1:
+                show_insight_plot_slot(
+                    "10_confusion_matrix_knn.png",
+                    max_width=290
+                )
+                st.caption(
+                    "Tuned KNN — TN 82, FP 18, FN 25, TP 29"
+                )
+
+            with cm2:
+                show_insight_plot_slot(
+                    "10_confusion_matrix_svm.png",
+                    max_width=290
+                )
+                st.caption(
+                    "Tuned SVM — TN 72, FP 28, FN 15, TP 39"
+                )
+
+            with cm3:
+                show_insight_plot_slot(
+                    "10_confusion_matrix_random_forest.png",
+                    max_width=290
+                )
+                st.caption(
+                    "Tuned Random Forest — TN 78, FP 22, FN 11, TP 43"
+                )
+
+            st.markdown(
+                '<div class="insight-plot-desc">'
+                "All three matrices are evaluated on the same <b>154-patient test set</b>. "
+                "For the tuned Random Forest, there are <b>78 true negatives</b>, "
+                "<b>22 false positives</b>, <b>11 false negatives</b>, and "
+                "<b>43 true positives</b>. The relatively low false-negative count "
+                "corresponds to its high diabetic recall of 79.63%."
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+        insight_divider()
+
+        # ROC curve
+        with st.container(border=True):
+            roc_filename = (
+                "11_roc_curve_2.png"
+                if os.path.exists("11_roc_curve_2.png")
+                else "11_roc_curve.png"
+            )
+
+            show_insight_plot(
+                roc_filename,
+                "📈",
+                "ROC Curves for Tuned Models",
+                "The notebook reports test ROC-AUC values of "
+                "<b>0.7943 for Tuned KNN</b>, <b>0.8105 for Tuned SVM</b>, and "
+                "<b>0.8250 for Tuned Random Forest</b>. A higher ROC-AUC indicates "
+                "better overall separation between diabetic and non-diabetic cases "
+                "across classification thresholds."
+            )
+
+    # =====================================================
+    # SECTION 4 — FEATURE IMPORTANCE
     # =====================================================
     elif section == "🌟 Feature Importance":
+
         insight_group_header(
             "🌟 Feature Importance",
-            "Which of the 8 health measurements actually drive the Random Forest's predictions?"
+            "Which of the eight input features contribute most to the final Random Forest?"
         )
-        
+
         with st.container(border=True):
+
             show_insight_plot(
-                "13_feature_importance.png", "🏅", "Feature Ranking",
-                "This ranking is computed directly from how much each feature reduces prediction error across every split in the Random Forest. "
-                "<b>Glucose (~38%)</b> strongly dominates the model's decision-making process. It is followed by <b>BMI (~21%)</b> and <b>Age (~17%)</b>. "
-                "Metrics like <b>Insulin (~9%)</b> and the <b>Diabetes Pedigree Function (~6%)</b> offer moderate value, while <b>Skin Thickness (~4%)</b>, "
-                "<b>Pregnancies (~3%)</b>, and <b>Blood Pressure (~2%)</b> contribute the least to the final prediction."
+                "13_feature_importance.png",
+                "🏅",
+                "Random Forest Feature Importance",
+                "The notebook reports the following importance values: "
+                "<b>Glucose = 0.4083</b>, <b>BMI = 0.1697</b>, "
+                "<b>Age = 0.1356</b>, <b>Insulin = 0.0833</b>, "
+                "<b>Diabetes Pedigree Function = 0.0792</b>, "
+                "<b>Skin Thickness = 0.0443</b>, "
+                "<b>Blood Pressure = 0.0414</b>, and "
+                "<b>Pregnancies = 0.0382</b>."
+            )
+
+            st.markdown(
+                '<div class="insight-plot-desc">'
+                "<b>Glucose is the most important feature</b> in this Random Forest, "
+                "with an importance of 0.4083. BMI and Age follow at 0.1697 and 0.1356. "
+                "Feature importance indicates predictive usefulness within this model; "
+                "it does <b>not</b> mean that a feature causes diabetes."
+                "</div>",
+                unsafe_allow_html=True
             )
 
     # =====================================================
-    # SECTION 5 — Final Comparison
+    # SECTION 5 — FINAL COMPARISON
     # =====================================================
     elif section == "🏆 Final Comparison":
+
         insight_group_header(
             "🏆 Final Model Comparison",
-            "After hyperparameter tuning via 5-fold Grid Search, "
-            "here's how every candidate stacks up."
+            "The final model was selected using 5-fold stratified cross-validation, "
+            "then evaluated once on the held-out test set."
         )
-        
+
         with st.container(border=True):
+
             show_insight_plot(
-                "17_final_comparison.png", "🎯", "All Models, All Metrics",
-                "Side-by-side view of Accuracy, Precision, Recall, F1-Score and ROC-AUC for every model tested, "
-                "including the final tuned Random Forest, all on the same 0–1 scale so the trade-offs between "
-                "models are easy to compare at a glance rather than reading five separate numbers per model."
+                "17_final_comparison.png",
+                "🎯",
+                "All Models, All Metrics",
+                "This visualization compares Accuracy, Precision, Recall, F1-score "
+                "and ROC-AUC across the candidate models. The final tuned Random Forest "
+                "achieves the strongest overall test-set results among the tuned models."
             )
+
         insight_divider()
 
-        st.markdown('<div class="insight-plot-title">🌳 Deployed Model: Random Forest (Tuned)</div>', unsafe_allow_html=True)
-        d1, d2, d3, d4 = st.columns(4)
-        with d1:
-            st.metric("Test Accuracy", "78.6%") 
-        with d2:
-            st.metric("Recall", "79.6%") 
-        with d3:
-            st.metric("ROC-AUC", "0.825") 
-        with d4:
-            st.metric("F1-Score", "72.3%")
-            
         st.markdown(
-            "<div class=\"insight-plot-desc\">The metrics above highlight the trade-offs each classifier makes. "
-            "The Tuned Random Forest algorithm achieves a Recall of 79.6% and an Accuracy of 78.6%, with an ROC-AUC of 0.825. "
-            "This ensures our deployed model generalizes well to new, unseen patient data. This tuned model is what's "
-            "saved as <code>final_model.pkl</code> and powers every single prediction in this app.</div>",
+            '<div class="insight-plot-title">🏆 Why Random Forest Was Selected</div>',
+            unsafe_allow_html=True
+        )
+
+        cv_table = pd.DataFrame([
+            {
+                "Model": "Tuned Random Forest",
+                "CV Recall": "0.7474",
+                "CV F1-score": "0.7018",
+                "CV ROC-AUC": "0.8365",
+                "Average Rank": "1.3333",
+                "Overall Rank": "1"
+            },
+            {
+                "Model": "Tuned SVM",
+                "CV Recall": "0.7850",
+                "CV F1-score": "0.6982",
+                "CV ROC-AUC": "0.8321",
+                "Average Rank": "1.6667",
+                "Overall Rank": "2"
+            },
+            {
+                "Model": "Tuned KNN",
+                "CV Recall": "0.5986",
+                "CV F1-score": "0.6495",
+                "CV ROC-AUC": "0.8279",
+                "Average Rank": "3.0000",
+                "Overall Rank": "3"
+            }
+        ])
+
+        st.dataframe(
+            cv_table,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.markdown(
+            '<div class="insight-plot-desc">'
+            "The notebook selected <b>Tuned Random Forest</b> using the lowest average "
+            "rank across CV Recall, CV F1-score and CV ROC-AUC. "
+            "Random Forest ranked first overall with an average rank of "
+            "<b>1.3333</b>. The test set was not used to choose the model."
+            "</div>",
+            unsafe_allow_html=True
+        )
+
+        insight_divider()
+
+        st.markdown(
+            '<div class="insight-plot-title">🌳 Deployed Model: Tuned Random Forest</div>',
+            unsafe_allow_html=True
+        )
+
+        d1, d2, d3, d4 = st.columns(4)
+
+        with d1:
+            st.metric("Test Accuracy", "78.57%")
+
+        with d2:
+            st.metric("Precision", "66.15%")
+
+        with d3:
+            st.metric("Recall", "79.63%")
+
+        with d4:
+            st.metric("ROC-AUC", "0.8250")
+
+        st.markdown(
+            '<div class="insight-plot-desc">'
+            "The final Random Forest uses the notebook-selected parameters: "
+            "<code>class_weight='balanced'</code>, <code>max_depth=6</code>, "
+            "<code>max_features='log2'</code>, <code>min_samples_leaf=5</code>, "
+            "<code>min_samples_split=2</code>, and <code>n_estimators=80</code>. "
+            "The notebook then fits the final model using the full training dataset "
+            "while keeping the test set separate."
+            "</div>",
             unsafe_allow_html=True
         )
 
     # =====================================================
-    # Section navigation — Back / Next buttons
+    # SECTION NAVIGATION
     # =====================================================
     insight_divider(margin="26px 0 10px 0")
+
     current_idx = insights_sections.index(section)
     is_first = current_idx == 0
     is_last = current_idx == len(insights_sections) - 1
 
     nav_back, nav_step, nav_next = st.columns([1, 1, 1])
+
     with nav_back:
         if not is_first:
             st.button(
@@ -1880,11 +2313,15 @@ def model_insights_page():
                 on_click=_set_insights_section,
                 args=(insights_sections[current_idx - 1],)
             )
+
     with nav_step:
         st.markdown(
-            f'<div class="insight-nav-step">SECTION {current_idx + 1} OF {len(insights_sections)}</div>',
+            f'<div class="insight-nav-step">'
+            f'SECTION {current_idx + 1} OF {len(insights_sections)}'
+            f'</div>',
             unsafe_allow_html=True
         )
+
     with nav_next:
         if not is_last:
             st.button(
@@ -2054,7 +2491,7 @@ with tab_diabetes:
                     min_value=0,
                     max_value=300,
                     value=st.session_state.form_values["glucose"],
-                    help="Glucose level in blood (1-300 mg/dL)"
+                    help="Glucose level in blood (0-300 mg/dL). A value of 0 is treated as missing and replaced by the training median."
                 )
                 
                 blood_pressure = st.number_input(
@@ -2062,7 +2499,7 @@ with tab_diabetes:
                     min_value=0,
                     max_value=200,
                     value=st.session_state.form_values["blood_pressure"],
-                    help="Diastolic blood pressure (1-200 mmHg)"
+                    help="Diastolic blood pressure (0-200 mmHg). A value of 0 is treated as missing and replaced by the training median."
                 )
                 
                 skin = st.number_input(
@@ -2071,7 +2508,7 @@ with tab_diabetes:
                     max_value=99,
                     value=st.session_state.form_values["skin"],
                     step=1,
-                    help="Triceps skin fold thickness (1-99 mm)"
+                    help="Triceps skin fold thickness (0-99 mm). A value of 0 is treated as missing and replaced by the training median."
                 )
             
             with right:
@@ -2080,7 +2517,7 @@ with tab_diabetes:
                     min_value=0,
                     max_value=900,
                     value=st.session_state.form_values["insulin"],
-                    help="2-Hour serum insulin (0-900)"
+                    help="2-Hour serum insulin (0-900). A value of 0 is treated as missing and replaced by the training median."
                 )
                 
                 bmi = st.number_input(
@@ -2089,7 +2526,7 @@ with tab_diabetes:
                     max_value=100.0,
                     value=st.session_state.form_values["bmi"],
                     step=0.1,
-                    help="Body Mass Index (0.1-100)"
+                    help="Body Mass Index (0-100). A value of 0 is treated as missing and replaced by the training median."
                 )
                 
                 dpf = st.number_input(
