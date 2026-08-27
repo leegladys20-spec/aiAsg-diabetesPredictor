@@ -563,20 +563,58 @@ div[data-testid="stDownloadButton"] button:hover {
 .insight-stat-card {
     background: white;
     border-radius: 16px;
-    padding: 18px 10px;
+    padding: 20px 12px 16px 12px;
     text-align: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.07);
     border-top: 4px solid #1A237E;
+    min-height: 118px;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 .insight-stat-icon { font-size: 26px; margin-bottom: 4px; }
-.insight-stat-value { font-size: 20px; font-weight: 800; color: #1A237E; }
+.insight-stat-value { font-size: 30px; line-height: 1.1; font-weight: 800; color: #1A237E; }
 .insight-stat-label {
     font-size: 12px;
     color: #777;
     margin-top: 2px;
     text-transform: uppercase;
     letter-spacing: .4px;
+}
+.zero-analysis-card {
+    min-height: 128px;
+    height: 128px;
+    padding: 18px 10px 14px 10px;
+    margin: 0;
+    position: relative;
+}
+/* The zero-value cards intentionally contain ONLY the count and label.
+   Hide any inherited icon element so an unwanted extra 0/icon can never appear. */
+.zero-analysis-card .insight-stat-icon,
+.zero-analysis-card .zero-card-icon {
+    display: none !important;
+}
+.zero-analysis-card .insight-stat-value,
+.zero-analysis-card .zero-card-value {
+    font-size: 34px !important;
+    line-height: 1.05;
+    font-weight: 800;
+    margin: 0 0 9px 0;
+    padding: 0;
+}
+.zero-analysis-card .insight-stat-label,
+.zero-analysis-card .zero-card-label {
+    font-size: 11.5px;
+    line-height: 1.35;
+    margin: 0;
+    padding: 0;
+}
+
+/* No leading numeric/icon element is used in Zero Value Analysis cards. */
+.zero-analysis-card > *:not(.zero-card-value):not(.zero-card-label) {
+    display: none !important;
 }
 .insight-plot-title {
     font-size: 20px;
@@ -1917,10 +1955,9 @@ def model_insights_page():
                 with col:
                     st.markdown(
                         f"""
-                        <div class="insight-stat-card">
-                            <div class="insight-stat-icon">0</div>
-                            <div class="insight-stat-value">{value}</div>
-                            <div class="insight-stat-label">{name} zeros</div>
+                        <div class="insight-stat-card zero-analysis-card">
+                            <div class="zero-card-value">{value}</div>
+                            <div class="zero-card-label">{name} zeros</div>
                         </div>
                         """,
                         unsafe_allow_html=True
