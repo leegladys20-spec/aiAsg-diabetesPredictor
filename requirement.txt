@@ -5,3 +5,7 @@ scikit-learn
 plotly
 openpyxl
 xlrd
+joblib
+matplotlib
+seaborn
+
