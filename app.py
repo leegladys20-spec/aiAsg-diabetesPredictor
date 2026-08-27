@@ -638,8 +638,8 @@ div[data-testid="stImage"] {
     width: 100% !important;
 }
 
-div[data-testid="stImage"] img {
-    max-width: 70% !important; /* Shrinks the images slightly to make them suitable */
+div[data-testid="stImage"] > img {
+    width: 80% !important; /* Shrinks the images slightly to make them suitable */
     margin: 0 auto !important; /* Strict centering */
     border-radius: 8px;
     object-fit: contain;
@@ -666,8 +666,8 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
         height: 55px !important;
         padding: 15px !important;
     }
-    div[data-testid="stImage"] img {
-        max-width: 100% !important; /* Restores image width on smaller screens */
+    div[data-testid="stImage"] > img {
+        width: 100% !important; /* Restores image width on smaller screens */
     }
 }
 </style>
@@ -1542,8 +1542,8 @@ def show_insight_plot(filename, icon, title, explanation, caption=None):
     st.markdown(f'<div class="insight-plot-title">{icon} {title}</div>', unsafe_allow_html=True)
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
-        # Setting use_container_width to False lets the CSS handle the smaller width 
-        st.image(path, caption=caption) 
+        # Allow custom CSS to handle centering and scaling
+        st.image(path, caption=caption)
     else:
         st.markdown(f"""
         <div class="insight-missing-box">
@@ -1562,7 +1562,7 @@ def show_insight_plot_slot(filename, caption=None):
     """Render just the image (or placeholder) for use inside multi-column layouts."""
     path = os.path.join(PLOTS_DIR, filename)
     if os.path.exists(path):
-        st.image(path, use_container_width=True, caption=caption)
+        st.image(path, caption=caption)
     else:
         st.markdown(f'<div class="insight-missing-box">📁 {filename}<br>not found</div>', unsafe_allow_html=True)
 
@@ -1697,18 +1697,16 @@ def model_insights_page():
             "found and fixed."
         )
 
-        # 1. Zero Value Analysis & NaN Replacement in SEPARATE border containers
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            with st.container(border=True):
+        # 1. Zero Value Analysis 
+        with st.container(border=True):
+            c1, c2 = st.columns(2)
+            with c1:
                 show_insight_plot(
                     "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
                     "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
                 )
                 
-        with c2:
-            with st.container(border=True):
+            with c2:
                 show_insight_plot(
                     "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
                     "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
@@ -1756,7 +1754,6 @@ def model_insights_page():
         st.markdown('<div class="insight-plot-title">📋 Tuned Model Performance Comparison</div>', unsafe_allow_html=True)
         
         try:
-            # First try the updated name, then fallback to original
             if os.path.exists("model_comparison_results_2.csv"):
                 base_results = pd.read_csv("model_comparison_results_2.csv")
             else:
@@ -1765,7 +1762,6 @@ def model_insights_page():
             metric_cols = ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
             valid_cols = [c for c in metric_cols if c in base_results.columns]
             
-            # Since some values might be strings (like "74.68%"), we just display the dataframe directly
             st.dataframe(base_results, use_container_width=True, hide_index=True)
             
         except Exception as e:
@@ -1798,7 +1794,6 @@ def model_insights_page():
         )
         insight_divider()
 
-        # Try to load either 11_roc_curve_2.png or 11_roc_curve.png
         roc_filename = "11_roc_curve_2.png" if os.path.exists("11_roc_curve_2.png") else "11_roc_curve.png"
         
         with st.container(border=True):
