@@ -625,6 +625,21 @@ div[data-testid="stRadio"] label {
     font-weight: 600;
 }
 
+/* Updated CSS for Preprocessing Borders and Image Margins */
+div[data-testid="stImage"] {
+    margin: 20px auto !important;
+}
+
+.preprocessing-box {
+    border: 1px solid #d0d5dd;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    height: 100%;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .bmi-info-grid {
@@ -1665,18 +1680,21 @@ def model_insights_page():
 
         c1, c2 = st.columns(2)
         with c1:
+            st.markdown('<div class="preprocessing-box">', unsafe_allow_html=True)
             show_insight_plot(
                 "02_zero_value_analysis.png", "🕳️", "Zero Value Analysis",
-                "Counting the zero entries in the dataset exposes the extent of the unrecorded data: "
-                "<b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), "
-                "<b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
+                "Counting the zero entries in the dataset exposes the extent of the unrecorded data: <b>Insulin</b> (374 zeros), <b>Skin Thickness</b> (227), <b>Blood Pressure</b> (35), <b>BMI</b> (11), and <b>Glucose</b> (5). These impossible zeros must be handled properly so they do not drag the model's learned thresholds toward impossible values."
             )
+            st.markdown('</div>', unsafe_allow_html=True)
+            
         with c2:
+            st.markdown('<div class="preprocessing-box">', unsafe_allow_html=True)
             show_insight_plot(
                 "03_missing_values.png", "NaN", "Replacing Zeros with NaN",
-                "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). "
-                "This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
+                "To ensure data integrity, the impossible zeros were converted to NaN (Not a Number). This chart visualizes the true missingness profile of the dataset prior to applying median imputation."
             )
+            st.markdown('</div>', unsafe_allow_html=True)
+            
         insight_divider()
 
         show_insight_plot(
@@ -1713,9 +1731,6 @@ def model_insights_page():
                 
             metric_cols = ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
             valid_cols = [c for c in metric_cols if c in base_results.columns]
-            
-            # The error occurred because .background_gradient() silently requires matplotlib to be installed to generate the color gradient.
-            # Removed the background_gradient to allow the dataframe to render purely with Streamlit's native engine.
             
             # Since some values might be strings (like "74.68%"), we just display the dataframe directly
             st.dataframe(base_results, use_container_width=True, hide_index=True)
@@ -1797,16 +1812,19 @@ def model_insights_page():
         insight_divider()
 
         st.markdown('<div class="insight-plot-title">🌳 Deployed Model: Random Forest (Tuned)</div>', unsafe_allow_html=True)
-        d1, d2, d3 = st.columns(3)
+        d1, d2, d3, d4 = st.columns(4)
         with d1:
-            st.metric("Test Accuracy", "74.7%")
+            st.metric("Test Accuracy", "XX.X%") # Placeholder until values are known
         with d2:
-            st.metric("ROC-AUC", "0.821")
+            st.metric("Recall", "XX.X%") # Placeholder until values are known
         with d3:
-            st.metric("Overfitting Gap", "~6.3 pt", help="Train vs Test accuracy gap")
+            st.metric("ROC-AUC", "0.XXX") # Placeholder until values are known
+        with d4:
+            st.metric("Overfitting Gap", "~X.X pt", help="Train vs Test accuracy gap") # Placeholder
+            
         st.markdown(
             "<div class=\"insight-plot-desc\">Hyperparameter tuning successfully improved the Random Forest's recall and "
-            "significantly reduced its tendency to overfit. The Train-Test accuracy gap dropped from ~26.5% (Baseline) to ~6.3% (Tuned). "
+            "significantly reduced its tendency to overfit. The Train-Test accuracy gap dropped noticeably. "
             "This ensures our deployed model generalizes much better to new, unseen patient data. This tuned model is what's "
             "saved as <code>final_model.pkl</code> and powers every single prediction in this app.</div>",
             unsafe_allow_html=True
