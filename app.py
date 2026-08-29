@@ -2586,15 +2586,15 @@ with tab_diabetes:
                     min_value=0,
                     max_value=300,
                     value=st.session_state.form_values["glucose"],
-                    help="Glucose level in blood (0-300 mg/dL). A value of 0 is treated as missing and replaced by the training median."
+                    help="Glucose level in blood (0-300 mg/dL)."
                 )
-                
+            
                 blood_pressure = st.number_input(
                     "❤️ Blood Pressure (mmHg)",
                     min_value=0,
                     max_value=200,
                     value=st.session_state.form_values["blood_pressure"],
-                    help="Diastolic blood pressure (0-200 mmHg). A value of 0 is treated as missing and replaced by the training median."
+                    help="Diastolic blood pressure (0-200 mmHg)."
                 )
                 
                 skin = st.number_input(
@@ -2603,7 +2603,7 @@ with tab_diabetes:
                     max_value=99,
                     value=st.session_state.form_values["skin"],
                     step=1,
-                    help="Triceps skin fold thickness (0-99 mm). A value of 0 is treated as missing and replaced by the training median."
+                    help="Triceps skin fold thickness (0-99 mm)."
                 )
             
             with right:
@@ -2612,7 +2612,7 @@ with tab_diabetes:
                     min_value=0,
                     max_value=900,
                     value=st.session_state.form_values["insulin"],
-                    help="2-Hour serum insulin (0-900). A value of 0 is treated as missing and replaced by the training median."
+                    help="2-Hour serum insulin (0-900)."
                 )
                 
                 bmi = st.number_input(
@@ -2621,7 +2621,7 @@ with tab_diabetes:
                     max_value=100.0,
                     value=st.session_state.form_values["bmi"],
                     step=0.1,
-                    help="Body Mass Index (0-100). A value of 0 is treated as missing and replaced by the training median."
+                    help="Body Mass Index (0-100)."
                 )
                 
                 dpf = st.number_input(
