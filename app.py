@@ -2671,85 +2671,379 @@ with tab_diabetes:
             st.rerun()
         
         if predict:
-    # Validate all manual inputs
-    errors = validate_required_fields(
-        glucose,
-        blood_pressure,
-        bmi,
-        age,
-        dpf,
-        skin,
-        insulin,
-        pregnancies
-    )
-
-    # Stop prediction if any validation error exists
-    if errors:
-        st.error("❌ Please correct the following input errors:")
-
-        for error in errors:
-            st.warning(f"⚠️ {error}")
-
-        st.info(
-            "ℹ️ Zero values are not accepted for clinical measurements. "
-            "Please enter the actual measurement instead of leaving the field as 0."
-        )
-
-    else:
-        # Create patient dataframe
-        patient = pd.DataFrame(
-            [[
-                pregnancies,
+            # Validate all manual inputs
+            errors = validate_required_fields(
                 glucose,
                 blood_pressure,
+                bmi,
+                age,
+                dpf,
                 skin,
                 insulin,
-                bmi,
-                dpf,
-                age
-            ]],
-            columns=[
-                "Pregnancies",
-                "Glucose",
-                "BloodPressure",
-                "SkinThickness",
-                "Insulin",
-                "BMI",
-                "DiabetesPedigreeFunction",
-                "Age"
-            ]
-        )
-
-        # Make prediction
-        prediction, diabetes_prob, healthy_prob, patient_processed = (
-            predict_patient_manual(patient)
-        )
-
-        if prediction is not None:
-
-            st.session_state.prediction = prediction
-            st.session_state.patient = patient
-            st.session_state.diabetes_prob = diabetes_prob
-            st.session_state.healthy_prob = healthy_prob
-
-            # Store current values
-            st.session_state.form_values = {
-                "pregnancies": pregnancies,
-                "glucose": glucose,
-                "blood_pressure": blood_pressure,
-                "skin": skin,
-                "insulin": insulin,
-                "bmi": bmi,
-                "dpf": dpf,
-                "age": age
-            }
-
-            # Add ONLY valid prediction to history
-            add_to_history(
-                patient_processed,
-                prediction,
-                diabetes_prob
+                pregnancies
             )
+
+            # Stop prediction if any validation error exists
+            if errors:
+                st.error("❌ Please correct the following input errors:")
+
+                for error in errors:
+                    st.warning(f"⚠️ {error}")
+
+                st.info(
+                    "ℹ️ Zero values are not accepted for clinical measurements. "
+                    "Please enter the actual measurement instead of leaving the field as 0."
+                )
+
+            else:
+                # Create patient dataframe
+                patient = pd.DataFrame(
+                    [[
+                        pregnancies,
+                        glucose,
+                        blood_pressure,
+                        skin,
+                        insulin,
+                        bmi,
+                        dpf,
+                        age
+                    ]],
+                    columns=[
+                        "Pregnancies",
+                        "Glucose",
+                        "BloodPressure",
+                        "SkinThickness",
+                        "Insulin",
+                        "BMI",
+                        "DiabetesPedigreeFunction",
+                        "Age"
+                    ]
+                )
+
+                # Make prediction
+                (
+                    prediction,
+                    diabetes_prob,
+                    healthy_prob,
+                    patient_processed
+                ) = predict_patient_manual(patient)
+
+                if prediction is not None:
+                    # Save prediction results
+                    st.session_state.prediction = prediction
+                    st.session_state.patient = patient
+                    st.session_state.diabetes_prob = diabetes_prob
+                    st.session_state.healthy_prob = healthy_prob
+
+                    # Store current form values
+                    st.session_state.form_values = {
+                        "pregnancies": pregnancies,
+                        "glucose": glucose,
+                        "blood_pressure": blood_pressure,
+                        "skin": skin,
+                        "insulin": insulin,
+                        "bmi": bmi,
+                        "dpf": dpf,
+                        "age": age
+                    }
+
+                    # Add only valid prediction to history
+                    add_to_history(
+                        patient_processed,
+                        prediction,
+                        diabetes_prob
+                    )
+
+    # =====================================================
+    # FILE UPLOAD
+    # =====================================================
+    if st.session_state.mode == "upload":
+        # Check if there's an upload error
+        if (
+            "upload_error" in st.session_state
+            and st.session_state.upload_error
+        ):
+            st.markdown(
+                f"""
+                <div class="error-box">
+                    <div class="error-title">
+                        ❌ File Upload Error
+                    </div>
+
+                    <div class="error-message">
+                        {st.session_state.upload_error}
+                    </div>
+
+                    <div class="error-solution">
+                        <strong>💡 How to fix this:</strong><br>
+                        • Make sure your file is CSV or Excel format<br>
+                        • Check that all required columns exist<br>
+                        • Make sure the file is not empty or corrupted
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button(
+                    "📁 Upload Again",
+                    use_container_width=True
+                ):
+                    del st.session_state.upload_error
+                    st.session_state.uploader_key = str(uuid.uuid4())
+                    st.rerun()
+
+            with col2:
+                if st.button(
+                    "✏️ Switch to Manual Input",
+                    use_container_width=True
+                ):
+                    del st.session_state.upload_error
+                    st.session_state.mode = "manual"
+                    st.rerun()
+
+            st.stop()
+
+        # Check data validation error
+        if (
+            "upload_data_error" in st.session_state
+            and st.session_state.upload_data_error
+        ):
+            st.markdown(
+                f"""
+                <div class="error-box">
+                    <div class="error-title">
+                        ❌ Data Validation Error
+                    </div>
+
+                    <div class="error-message">
+                        {st.session_state.upload_data_error}
+                    </div>
+
+                    <div class="error-solution">
+                        <strong>💡 How to fix this:</strong><br>
+                        • Check that all values are within valid ranges<br>
+                        • Check for missing/null values<br>
+                        • Ensure all required fields are present
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button(
+                    "📁 Upload New File",
+                    use_container_width=True,
+                    key="upload_new_file"
+                ):
+                    del st.session_state.upload_data_error
+                    st.session_state.uploader_key = str(uuid.uuid4())
+                    st.rerun()
+
+            with col2:
+                if st.button(
+                    "✏️ Switch to Manual Input",
+                    use_container_width=True,
+                    key="switch_to_manual_error"
+                ):
+                    del st.session_state.upload_data_error
+                    st.session_state.mode = "manual"
+                    st.rerun()
+
+            st.stop()
+
+        # File uploader
+        uploader_key = st.session_state.get(
+            "uploader_key",
+            str(uuid.uuid4())
+        )
+
+        uploaded_file = st.file_uploader(
+            "📤 Upload CSV or Excel File",
+            type=["csv", "xlsx", "xls"],
+            help="Upload a CSV or Excel file with the required columns.",
+            key=uploader_key
+        )
+
+        if uploaded_file is not None:
+            try:
+                # Read file
+                if uploaded_file.name.lower().endswith(".csv"):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+
+                required_columns = [
+                    "Pregnancies",
+                    "Glucose",
+                    "BloodPressure",
+                    "SkinThickness",
+                    "Insulin",
+                    "BMI",
+                    "DiabetesPedigreeFunction",
+                    "Age"
+                ]
+
+                # Check columns
+                missing_columns = [
+                    col
+                    for col in required_columns
+                    if col not in df.columns
+                ]
+
+                if missing_columns:
+                    st.session_state.upload_error = (
+                        "Missing required columns: "
+                        + ", ".join(missing_columns)
+                    )
+                    st.rerun()
+
+                # Validate data
+                validation_errors = validate_uploaded_data(df)
+
+                if validation_errors:
+                    st.session_state.upload_data_error = "\n".join(
+                        validation_errors
+                    )
+                    st.rerun()
+
+                # Display uploaded data
+                st.subheader("📊 Uploaded Data")
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
+
+                # Prediction button
+                if st.button(
+                    "🚀 Predict Uploaded Data",
+                    use_container_width=True
+                ):
+                    with st.spinner("Making predictions..."):
+
+                        results = []
+                        df_processed = df.copy()
+                        debug_rows = []
+
+                        for idx, row in df.iterrows():
+
+                            patient = pd.DataFrame(
+                                [row[required_columns]]
+                            )
+
+                            (
+                                prediction,
+                                diabetes_prob,
+                                healthy_prob,
+                                raw_values
+                            ) = predict_patient_upload(patient)
+
+                            if prediction is not None:
+
+                                results.append({
+                                    "Prediction": prediction,
+                                    "Diabetes_Probability": (
+                                        diabetes_prob
+                                        if diabetes_prob is not None
+                                        else 0
+                                    ),
+                                    "Healthy_Probability": (
+                                        healthy_prob
+                                        if healthy_prob is not None
+                                        else 0
+                                    ),
+                                    "Risk_Level": (
+                                        get_risk_level(diabetes_prob)
+                                        if diabetes_prob is not None
+                                        else "Unknown"
+                                    )
+                                })
+
+                                # Add prediction to history
+                                add_to_history(
+                                    row.to_dict(),
+                                    prediction,
+                                    diabetes_prob
+                                )
+
+                                # Debug information
+                                debug_entry = {
+                                    "Row": idx + 1
+                                }
+
+                                for col in required_columns:
+                                    debug_entry[
+                                        f"raw_{col}"
+                                    ] = row[col]
+
+                                debug_entry[
+                                    "Diabetes_Prob_%"
+                                ] = (
+                                    round(diabetes_prob, 2)
+                                    if diabetes_prob is not None
+                                    else None
+                                )
+
+                                debug_rows.append(debug_entry)
+
+                            else:
+                                results.append({
+                                    "Prediction": None,
+                                    "Diabetes_Probability": None,
+                                    "Healthy_Probability": None,
+                                    "Risk_Level": "Error"
+                                })
+
+                        # Create results dataframe
+                        result_df = pd.DataFrame(results)
+
+                        df["Prediction"] = result_df[
+                            "Prediction"
+                        ].apply(
+                            lambda x:
+                            "Diabetes"
+                            if x == 1
+                            else "No Diabetes"
+                            if x == 0
+                            else "Error"
+                        )
+
+                        df["Diabetes_Probability"] = (
+                            result_df["Diabetes_Probability"]
+                        )
+
+                        df["Risk_Level"] = result_df[
+                            "Risk_Level"
+                        ]
+
+                        # Save results
+                        st.session_state.upload_prediction_done = True
+                        st.session_state.upload_results_df = df
+                        st.session_state.upload_results = results
+                        st.session_state.upload_original_df = df_processed
+                        st.session_state.upload_debug_rows = debug_rows
+
+                        st.rerun()
+
+            except pd.errors.EmptyDataError:
+                st.session_state.upload_error = (
+                    "The uploaded file is empty. "
+                    "Please upload a valid file."
+                )
+                st.rerun()
+
+            except Exception as e:
+                st.session_state.upload_error = (
+                    f"Error reading file: {str(e)}"
+                )
+                st.rerun()
+
     
     # =====================================================
     # FILE UPLOAD (Strict: No zero replacement)
