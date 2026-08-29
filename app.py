@@ -742,34 +742,86 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 # =====================================================
 # Helper Functions
 # =====================================================
-def validate_required_fields(glucose, blood_pressure, bmi, age, dpf, skin, insulin, pregnancies):
-    """Validate required fields for prediction"""
+def validate_required_fields(
+    glucose, blood_pressure, bmi, age, dpf, skin, insulin, pregnancies
+):
+    """Validate manual input fields. Zero is NOT allowed for clinical measurements."""
     errors = []
-    
+
+    # Pregnancies: 0 is a valid value
     if pregnancies < 0 or pregnancies > 20:
         errors.append("Pregnancies must be between 0 and 20.")
-    
-    if glucose < 0 or glucose > 300:
-        errors.append("Glucose must be between 0 and 300 mg/dL. A value of 0 will be treated as missing and replaced with the training median.")
-    
-    if blood_pressure < 0 or blood_pressure > 200:
-        errors.append("Blood Pressure must be between 0 and 200 mmHg. A value of 0 will be treated as missing and replaced with the training median.")
-    
-    if skin < 0 or skin > 99:
-        errors.append("Skin Thickness must be between 0 and 99 mm. A value of 0 will be treated as missing and replaced with the training median.")
-    
-    if insulin < 0 or insulin > 900:
-        errors.append("Insulin must be between 0 and 900 mu U/ml.")
-    
-    if bmi < 0 or bmi > 100:
-        errors.append("BMI must be between 0 and 100 kg/m². A value of 0 will be treated as missing and replaced with the training median.")
-    
-    if age < 1 or age > 120:
-        errors.append("Age must be between 1 and 120 years.")
-    
+
+    # Glucose
+    if glucose == 0:
+        errors.append(
+            "Glucose cannot be 0. Please enter a valid glucose measurement "
+            "between 1 and 300 mg/dL."
+        )
+    elif glucose < 0 or glucose > 300:
+        errors.append(
+            "Glucose must be between 1 and 300 mg/dL."
+        )
+
+    # Blood Pressure
+    if blood_pressure == 0:
+        errors.append(
+            "Blood Pressure cannot be 0. Please enter a valid measurement "
+            "between 1 and 200 mmHg."
+        )
+    elif blood_pressure < 0 or blood_pressure > 200:
+        errors.append(
+            "Blood Pressure must be between 1 and 200 mmHg."
+        )
+
+    # Skin Thickness
+    if skin == 0:
+        errors.append(
+            "Skin Thickness cannot be 0. Please enter a valid measurement "
+            "between 1 and 99 mm."
+        )
+    elif skin < 0 or skin > 99:
+        errors.append(
+            "Skin Thickness must be between 1 and 99 mm."
+        )
+
+    # Insulin
+    if insulin == 0:
+        errors.append(
+            "Insulin cannot be 0. Please enter a valid measurement "
+            "between 1 and 900 mu U/ml."
+        )
+    elif insulin < 0 or insulin > 900:
+        errors.append(
+            "Insulin must be between 1 and 900 mu U/ml."
+        )
+
+    # BMI
+    if bmi == 0:
+        errors.append(
+            "BMI cannot be 0. Please enter a valid BMI between 1 and 100 kg/m²."
+        )
+    elif bmi < 0 or bmi > 100:
+        errors.append(
+            "BMI must be between 1 and 100 kg/m²."
+        )
+
+    # Age
+    if age == 0:
+        errors.append(
+            "Age cannot be 0. Please enter a valid age between 1 and 120 years."
+        )
+    elif age < 1 or age > 120:
+        errors.append(
+            "Age must be between 1 and 120 years."
+        )
+
+    # Diabetes Pedigree Function
     if dpf <= 0 or dpf > 3:
-        errors.append("Diabetes Pedigree Function must be between 0.01 and 3.0.")
-    
+        errors.append(
+            "Diabetes Pedigree Function must be between 0.01 and 3.0."
+        )
+
     return errors
 
 def replace_zero_values(df, columns):
@@ -1021,15 +1073,16 @@ def validate_uploaded_data(df):
     return errors
 
 def predict_patient_manual(patient_data):
-    """Make prediction for manual input with zero replacement."""
+    """Make prediction for valid manual input without zero imputation."""
     try:
-        # Replace zero values with medians (for manual input)
-        zero_columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
-        patient_processed = replace_zero_values(patient_data.copy(), zero_columns)
-        
-        # Feed raw (unscaled) values directly -- matches training logic provided
+        # IMPORTANT:
+        # Manual input has already been validated.
+        # No zero-to-median replacement is performed here.
+        patient_processed = patient_data.copy()
+
+        # Feed raw values directly to the trained model
         prediction = model.predict(patient_processed)[0]
-        
+
         # Get probability if available
         if hasattr(model, "predict_proba"):
             probability = model.predict_proba(patient_processed)[0]
@@ -1038,9 +1091,14 @@ def predict_patient_manual(patient_data):
         else:
             diabetes_prob = None
             healthy_prob = None
-        
-        return prediction, diabetes_prob, healthy_prob, patient_processed
-    
+
+        return (
+            prediction,
+            diabetes_prob,
+            healthy_prob,
+            patient_processed
+        )
+
     except Exception as e:
         st.error(f"Error making prediction: {e}")
         return None, None, None, None
@@ -2613,68 +2671,85 @@ with tab_diabetes:
             st.rerun()
         
         if predict:
-            # Validate all inputs
-            errors = validate_required_fields(
-                glucose, blood_pressure, bmi, age, dpf, skin, insulin, pregnancies
+    # Validate all manual inputs
+    errors = validate_required_fields(
+        glucose,
+        blood_pressure,
+        bmi,
+        age,
+        dpf,
+        skin,
+        insulin,
+        pregnancies
+    )
+
+    # Stop prediction if any validation error exists
+    if errors:
+        st.error("❌ Please correct the following input errors:")
+
+        for error in errors:
+            st.warning(f"⚠️ {error}")
+
+        st.info(
+            "ℹ️ Zero values are not accepted for clinical measurements. "
+            "Please enter the actual measurement instead of leaving the field as 0."
+        )
+
+    else:
+        # Create patient dataframe
+        patient = pd.DataFrame(
+            [[
+                pregnancies,
+                glucose,
+                blood_pressure,
+                skin,
+                insulin,
+                bmi,
+                dpf,
+                age
+            ]],
+            columns=[
+                "Pregnancies",
+                "Glucose",
+                "BloodPressure",
+                "SkinThickness",
+                "Insulin",
+                "BMI",
+                "DiabetesPedigreeFunction",
+                "Age"
+            ]
+        )
+
+        # Make prediction
+        prediction, diabetes_prob, healthy_prob, patient_processed = (
+            predict_patient_manual(patient)
+        )
+
+        if prediction is not None:
+
+            st.session_state.prediction = prediction
+            st.session_state.patient = patient
+            st.session_state.diabetes_prob = diabetes_prob
+            st.session_state.healthy_prob = healthy_prob
+
+            # Store current values
+            st.session_state.form_values = {
+                "pregnancies": pregnancies,
+                "glucose": glucose,
+                "blood_pressure": blood_pressure,
+                "skin": skin,
+                "insulin": insulin,
+                "bmi": bmi,
+                "dpf": dpf,
+                "age": age
+            }
+
+            # Add ONLY valid prediction to history
+            add_to_history(
+                patient_processed,
+                prediction,
+                diabetes_prob
             )
-            
-            if errors:
-                for error in errors:
-                    st.error(f"❌ {error}")
-                st.stop()
-            
-            # Check for zero values and show warnings
-            zero_warnings = []
-            if glucose == 0:
-                zero_warnings.append("Glucose is 0. Will be replaced with median value.")
-            if blood_pressure == 0:
-                zero_warnings.append("Blood Pressure is 0. Will be replaced with median value.")
-            if skin == 0:
-                zero_warnings.append("Skin Thickness is 0. Will be replaced with median value.")
-            if insulin == 0:
-                zero_warnings.append("Insulin is 0. Will be replaced with median value.")
-            if bmi == 0:
-                zero_warnings.append("BMI is 0. Will be replaced with median value.")
-            
-            if zero_warnings:
-                st.warning("⚠️ **Zero Values Detected**")
-                for warning in zero_warnings:
-                    st.warning(warning)
-                st.info("ℹ️ Zero values will be replaced with median values from the dataset for prediction.")
-            
-            # Create patient dataframe
-            patient = pd.DataFrame(
-                [[pregnancies, glucose, blood_pressure, skin, insulin, bmi, dpf, age]],
-                columns=[
-                    "Pregnancies", "Glucose", "BloodPressure", 
-                    "SkinThickness", "Insulin", "BMI", 
-                    "DiabetesPedigreeFunction", "Age"
-                ]
-            )
-            
-            # Make prediction
-            prediction, diabetes_prob, healthy_prob, patient_processed = predict_patient_manual(patient)
-            
-            if prediction is not None:
-                st.session_state.prediction = prediction
-                st.session_state.patient = patient
-                st.session_state.diabetes_prob = diabetes_prob
-                st.session_state.healthy_prob = healthy_prob
-                
-                # Store current values for persistence
-                st.session_state.form_values = {
-                    "pregnancies": pregnancies,
-                    "glucose": glucose,
-                    "blood_pressure": blood_pressure,
-                    "skin": skin,
-                    "insulin": insulin,
-                    "bmi": bmi,
-                    "dpf": dpf,
-                    "age": age
-                }
-                
-                # Add to history
-                add_to_history(patient_processed, prediction, diabetes_prob)
     
     # =====================================================
     # FILE UPLOAD (Strict: No zero replacement)
