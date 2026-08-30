@@ -2858,19 +2858,6 @@ with tab_diabetes:
 
             st.stop()
 
-        # File uploader
-        uploader_key = st.session_state.get(
-            "uploader_key",
-            str(uuid.uuid4())
-        )
-
-        uploaded_file = st.file_uploader(
-            "📤 Upload CSV or Excel File",
-            type=["csv", "xlsx", "xls"],
-            help="Upload a CSV or Excel file with the required columns.",
-            key=uploader_key
-        )
-
         if uploaded_file is not None:
             try:
                 # Read file
