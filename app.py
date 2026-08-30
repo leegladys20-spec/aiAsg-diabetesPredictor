@@ -2864,6 +2864,12 @@ with tab_diabetes:
             str(uuid.uuid4())
         )
 
+        uploaded_file = st.file_uploader(
+            "Upload your diabetes dataset",
+            type=["csv", "xlsx"],
+            key=uploader_key
+        )
+
         if uploaded_file is not None:
             try:
                 # Read file
