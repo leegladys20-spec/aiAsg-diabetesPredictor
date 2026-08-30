@@ -435,6 +435,42 @@ div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
     border-left: 4px solid #1a237e;
 }
 
+/* ============================================= */
+/* BMI Cute Animations */
+/* ============================================= */
+@keyframes bmiPopIn {
+    0%   { transform: scale(0.85); opacity: 0; }
+    60%  { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bmiFloat {
+    0%   { transform: translateY(0px); }
+    50%  { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes bmiMarkerPulse {
+    0%   { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(26, 35, 126, 0.35); }
+    70%  { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 10px rgba(26, 35, 126, 0); }
+    100% { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(26, 35, 126, 0); }
+}
+
+.bmi-result-box {
+    animation: bmiPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bmi-marker {
+    animation: bmiMarkerPulse 1.8s ease-out infinite;
+}
+
+.bmi-emoji-float {
+    display: inline-block;
+    animation: bmiFloat 2.2s ease-in-out infinite;
+    font-size: 42px;
+    line-height: 1;
+}
+
 /* File Uploader */
 div[data-testid="stFileUploader"] button {
     background: #f0f2f6 !important;
@@ -1141,174 +1177,311 @@ def predict_patient_upload(patient_data):
 # =====================================================
 # BMI Calculator Component
 # =====================================================
+def _bmi_category(bmi):
+    """Return (category, color, emoji, message, scale_position) for a BMI value."""
+    if bmi < 18.5:
+        category = "Underweight"
+        color = "#4fc3f7"
+        emoji = "📉"
+        message = "Consider consulting a nutritionist for a healthy weight gain plan."
+        position = (bmi / 40) * 100
+    elif bmi < 25:
+        category = "Normal Weight"
+        color = "#66bb6a"
+        emoji = "✅"
+        message = "Great job! Maintain your healthy lifestyle."
+        position = ((bmi - 18.5) / (24.9 - 18.5)) * 25 + 25
+    elif bmi < 30:
+        category = "Overweight"
+        color = "#ffca28"
+        emoji = "⚠️"
+        message = "Consider lifestyle changes to reach a healthy weight."
+        position = ((bmi - 25) / (29.9 - 25)) * 25 + 50
+    else:
+        category = "Obese"
+        color = "#ef5350"
+        emoji = "❌"
+        message = "Please consult a healthcare professional for guidance."
+        position = min(((bmi - 30) / 10) * 25 + 75, 95)
+
+    position = max(2, min(98, position))
+    return category, color, emoji, message, position
+
+
 def bmi_calculator():
-    """BMI Calculator with bigger inputs and full-width layout"""
-    
+    """BMI Calculator: live results, metric/imperial toggle, ideal weight range, and history tracking."""
+
     st.markdown("<h1 style='text-align: center; color: #1A237E;'>⚖️ BMI Calculator</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #555; margin-bottom: 30px;'>Calculate your Body Mass Index and assess your health status</p>", unsafe_allow_html=True)
-    
-    # Input Container - Full Width with bigger inputs (removed white box)
+
+    # -----------------------------------------------------
+    # Unit toggle
+    # -----------------------------------------------------
+    unit_system = st.radio(
+        "Units",
+        ["Metric (kg / m)", "Imperial (lb / ft-in)"],
+        horizontal=True,
+        key="bmi_unit_system",
+        label_visibility="collapsed"
+    )
+
     st.markdown('<div class="bmi-input-container">', unsafe_allow_html=True)
-    
-    # Weight and Height in two columns
+
     col1, col2 = st.columns(2)
-    
-    with col1:
-        weight = st.number_input(
-            "Weight (kg)",
-            min_value=20.0,
-            max_value=250.0,
-            value=70.0,
-            step=0.5,
-            help="Enter your weight in kilograms",
-            key="bmi_weight"
-        )
-    
-    with col2:
-        height = st.number_input(
-            "Height (m)",
-            min_value=0.50,
-            max_value=2.50,
-            value=1.70,
-            step=0.01,
-            help="Enter your height in meters",
-            key="bmi_height"
-        )
-    
-    # Calculate Button - Full width below inputs
-    st.markdown('<div class="bmi-calculate-btn">', unsafe_allow_html=True)
-    calculate_clicked = st.button("📊 Calculate BMI", use_container_width=True, key="bmi_calculate")
+
+    if unit_system == "Metric (kg / m)":
+        with col1:
+            weight_kg = st.slider(
+                "Weight (kg)",
+                min_value=20.0,
+                max_value=200.0,
+                value=st.session_state.get("bmi_weight_kg", 70.0),
+                step=0.5,
+                help="Drag to set your weight in kilograms",
+                key="bmi_weight_kg"
+            )
+        with col2:
+            height_m = st.slider(
+                "Height (m)",
+                min_value=1.00,
+                max_value=2.30,
+                value=st.session_state.get("bmi_height_m", 1.70),
+                step=0.01,
+                help="Drag to set your height in meters",
+                key="bmi_height_m"
+            )
+    else:
+        with col1:
+            weight_lb = st.slider(
+                "Weight (lb)",
+                min_value=44.0,
+                max_value=440.0,
+                value=st.session_state.get("bmi_weight_lb", 154.0),
+                step=1.0,
+                help="Drag to set your weight in pounds",
+                key="bmi_weight_lb"
+            )
+            weight_kg = weight_lb * 0.45359237
+        with col2:
+            ft_col, in_col = st.columns(2)
+            with ft_col:
+                height_ft = st.number_input(
+                    "Height (ft)",
+                    min_value=3,
+                    max_value=7,
+                    value=st.session_state.get("bmi_height_ft", 5),
+                    step=1,
+                    key="bmi_height_ft"
+                )
+            with in_col:
+                height_in = st.number_input(
+                    "Height (in)",
+                    min_value=0,
+                    max_value=11,
+                    value=st.session_state.get("bmi_height_in", 7),
+                    step=1,
+                    key="bmi_height_in"
+                )
+            total_inches = height_ft * 12 + height_in
+            height_m = total_inches * 0.0254
+
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Display results if calculated
-    if calculate_clicked:
-        bmi = weight / (height ** 2)
-        
-        # Determine category
-        if bmi < 18.5:
-            category = "Underweight"
-            color = "#4fc3f7"
-            emoji = "📉"
-            message = "Consider consulting a nutritionist for a healthy weight gain plan."
-            position = (bmi / 40) * 100
-        elif bmi < 25:
-            category = "Normal Weight"
-            color = "#66bb6a"
-            emoji = "✅"
-            message = "Great job! Maintain your healthy lifestyle."
-            position = ((bmi - 18.5) / (24.9 - 18.5)) * 25 + 25
-        elif bmi < 30:
-            category = "Overweight"
-            color = "#ffca28"
-            emoji = "⚠️"
-            message = "Consider lifestyle changes to reach a healthy weight."
-            position = ((bmi - 25) / (29.9 - 25)) * 25 + 50
+
+    # Results update live as sliders move — no button needed
+    bmi = weight_kg / (height_m ** 2)
+    category, color, emoji, message, position = _bmi_category(bmi)
+
+    # BMI Result Display
+    st.markdown(f"""
+    <div class="bmi-result-box">
+        <div class="bmi-emoji-float">{emoji}</div>
+        <div style="font-size: 16px; color: #888; font-weight: 500;">Your BMI</div>
+        <div class="bmi-value-large">{bmi:.1f}</div>
+        <div class="bmi-category" style="color: {color};">{category}</div>
+        <div class="bmi-message">{message}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # BMI Scale Bar
+    st.markdown("""
+    <div class="bmi-scale-container">
+        <div style="text-align: center; font-weight: 600; font-size: 18px; margin-bottom: 10px;">
+            BMI Scale
+        </div>
+        <div class="bmi-scale-bar">
+            <div class="bmi-marker" style="left: {:.1f}%;"></div>
+        </div>
+        <div class="bmi-labels">
+            <span style="color: #4fc3f7;">Underweight</span>
+            <span style="color: #81c784;">Normal</span>
+            <span style="color: #fff176;">Overweight</span>
+            <span style="color: #ef5350;">Obese</span>
+        </div>
+    </div>
+    """.format(position), unsafe_allow_html=True)
+
+    # -----------------------------------------------------
+    # Ideal weight range for this height
+    # -----------------------------------------------------
+    low_kg = 18.5 * (height_m ** 2)
+    high_kg = 24.9 * (height_m ** 2)
+
+    if unit_system == "Metric (kg / m)":
+        range_text = f"{low_kg:.1f} kg – {high_kg:.1f} kg"
+        delta_kg = weight_kg - high_kg if weight_kg > high_kg else (low_kg - weight_kg if weight_kg < low_kg else 0)
+        if delta_kg > 0:
+            delta_text = f"About {delta_kg:.1f} kg over the healthy range" if weight_kg > high_kg else f"About {delta_kg:.1f} kg under the healthy range"
         else:
-            category = "Obese"
-            color = "#ef5350"
-            emoji = "❌"
-            message = "Please consult a healthcare professional for guidance."
-            position = min(((bmi - 30) / 10) * 25 + 75, 95)
-        
-        position = max(2, min(98, position))
-        
-        # BMI Result Display
+            delta_text = "Within the healthy range"
+    else:
+        low_lb = low_kg / 0.45359237
+        high_lb = high_kg / 0.45359237
+        weight_lb_display = weight_kg / 0.45359237
+        range_text = f"{low_lb:.0f} lb – {high_lb:.0f} lb"
+        if weight_lb_display > high_lb:
+            delta_text = f"About {weight_lb_display - high_lb:.0f} lb over the healthy range"
+        elif weight_lb_display < low_lb:
+            delta_text = f"About {low_lb - weight_lb_display:.0f} lb under the healthy range"
+        else:
+            delta_text = "Within the healthy range"
+
+    st.markdown("### 🎯 Your Ideal Weight Range")
+    st.markdown(f"""
+    <div class="bmi-info-grid">
+        <div class="bmi-info-item">
+            <div class="label">Healthy Range for Your Height</div>
+            <div class="value">{range_text}</div>
+        </div>
+        <div class="bmi-info-item" style="border-left-color: {color};">
+            <div class="label">Where You Stand</div>
+            <div class="value" style="color: {color}; font-size: 16px;">{delta_text}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Detailed Information
+    st.markdown("### 📋 Detailed BMI Information")
+
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
         st.markdown(f"""
-        <div class="bmi-result-box">
-            <div style="font-size: 16px; color: #888; font-weight: 500;">Your BMI</div>
-            <div class="bmi-value-large">{bmi:.1f}</div>
-            <div class="bmi-category" style="color: {color};">{emoji} {category}</div>
-            <div class="bmi-message">{message}</div>
+        <div class="bmi-info-grid">
+            <div class="bmi-info-item">
+                <div class="label">Your BMI</div>
+                <div class="value">{bmi:.1f}</div>
+            </div>
+            <div class="bmi-info-item" style="border-left-color: {color};">
+                <div class="label">Category</div>
+                <div class="value" style="color: {color};">{category}</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        # BMI Scale Bar
-        st.markdown("""
-        <div class="bmi-scale-container">
-            <div style="text-align: center; font-weight: 600; font-size: 18px; margin-bottom: 10px;">
-                BMI Scale
-            </div>
-            <div class="bmi-scale-bar">
-                <div class="bmi-marker" style="left: {:.1f}%;"></div>
-            </div>
-            <div class="bmi-labels">
-                <span style="color: #4fc3f7;">Underweight</span>
-                <span style="color: #81c784;">Normal</span>
-                <span style="color: #fff176;">Overweight</span>
-                <span style="color: #ef5350;">Obese</span>
-            </div>
-        </div>
-        """.format(position), unsafe_allow_html=True)
-        
-        # Detailed Information
-        st.markdown("### 📋 Detailed BMI Information")
-        
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
+
+    with col2:
+        categories = [
+            ("Underweight", "< 18.5", bmi < 18.5, "underweight"),
+            ("Normal", "18.5 - 24.9", 18.5 <= bmi < 25, "normal"),
+            ("Overweight", "25 - 29.9", 25 <= bmi < 30, "overweight"),
+            ("Obese", ">= 30", bmi >= 30, "obese")
+        ]
+
+        for name, rtext, active, class_name in categories:
+            active_class = "active" if active else ""
             st.markdown(f"""
-            <div class="bmi-info-grid">
-                <div class="bmi-info-item">
-                    <div class="label">Your BMI</div>
-                    <div class="value">{bmi:.1f}</div>
-                </div>
-                <div class="bmi-info-item" style="border-left-color: {color};">
-                    <div class="label">Category</div>
-                    <div class="value" style="color: {color};">{category}</div>
-                </div>
+            <div class="bmi-category-item {class_name} {active_class}">
+                <span>{name}</span>
+                <span class="range">{rtext}</span>
             </div>
             """, unsafe_allow_html=True)
-        
-        with col2:
-            categories = [
-                ("Underweight", "< 18.5", bmi < 18.5, "underweight"),
-                ("Normal", "18.5 - 24.9", 18.5 <= bmi < 25, "normal"),
-                ("Overweight", "25 - 29.9", 25 <= bmi < 30, "overweight"),
-                ("Obese", ">= 30", bmi >= 30, "obese")
-            ]
-            
-            for name, range_text, active, class_name in categories:
-                active_class = "active" if active else ""
-                st.markdown(f"""
-                <div class="bmi-category-item {class_name} {active_class}">
-                    <span>{name}</span>
-                    <span class="range">{range_text}</span>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Health Implications
-        st.markdown("### 💡 Health Implications")
-        
-        if bmi < 18.5:
-            st.info("""
-            **Underweight (< 18.5):** May indicate malnutrition, eating disorders, 
-            or other health issues. Consider consulting a healthcare provider.
-            """)
-        elif bmi < 25:
-            st.success("""
-            **Normal (18.5 - 24.9):** Healthy weight range for most adults. 
-            Keep up the good work with a balanced diet and regular exercise.
-            """)
-        elif bmi < 30:
-            st.warning("""
-            **Overweight (25 - 29.9):** Increased risk of health problems. 
-            Consider adopting healthier eating habits and increasing physical activity.
-            """)
-        else:
-            st.error("""
-            **Obese (>= 30):** High risk of health problems including diabetes, 
-            heart disease, and more. Please consult a healthcare professional.
-            """)
-        
-        st.markdown("""
-        <div class="bmi-note">
-            <strong>📌 Note:</strong> BMI is a screening tool and doesn't account for 
-            muscle mass, bone density, or overall body composition. It should be used 
-            as a general guideline, not a definitive diagnostic tool.
-        </div>
-        """, unsafe_allow_html=True)
+
+    # Health Implications
+    st.markdown("### 💡 Health Implications")
+
+    if bmi < 18.5:
+        st.info("""
+        **Underweight (< 18.5):** May indicate malnutrition, eating disorders, 
+        or other health issues. Consider consulting a healthcare provider.
+        """)
+    elif bmi < 25:
+        st.success("""
+        **Normal (18.5 - 24.9):** Healthy weight range for most adults. 
+        Keep up the good work with a balanced diet and regular exercise.
+        """)
+    elif bmi < 30:
+        st.warning("""
+        **Overweight (25 - 29.9):** Increased risk of health problems. 
+        Consider adopting healthier eating habits and increasing physical activity.
+        """)
+    else:
+        st.error("""
+        **Obese (>= 30):** High risk of health problems including diabetes, 
+        heart disease, and more. Please consult a healthcare professional.
+        """)
+
+    st.markdown("""
+    <div class="bmi-note">
+        <strong>📌 Note:</strong> BMI is a screening tool and doesn't account for 
+        muscle mass, bone density, or overall body composition. It should be used 
+        as a general guideline, not a definitive diagnostic tool.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # -----------------------------------------------------
+    # BMI history tracking
+    # -----------------------------------------------------
+    st.markdown("---")
+    st.markdown("### 📈 Track Your BMI Over Time")
+
+    if "bmi_history" not in st.session_state:
+        st.session_state.bmi_history = []
+
+    log_col, clear_col = st.columns([3, 1])
+    with log_col:
+        if st.button("💾 Log This BMI", use_container_width=True, key="bmi_log_entry"):
+            st.session_state.bmi_history.append({
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "bmi": round(bmi, 1),
+                "category": category
+            })
+            if category == "Normal Weight":
+                st.balloons()
+            else:
+                st.toast(f"{emoji} Logged! Every entry helps you track your trend.", icon="📈")
+            st.rerun()
+    with clear_col:
+        if st.session_state.bmi_history:
+            if st.button("🗑️ Clear", use_container_width=True, key="bmi_clear_history"):
+                st.session_state.bmi_history = []
+                st.rerun()
+
+    if st.session_state.bmi_history:
+        hist = st.session_state.bmi_history
+        trend_fig = go.Figure(
+            go.Scatter(
+                x=[h["timestamp"] for h in hist],
+                y=[h["bmi"] for h in hist],
+                mode="lines+markers",
+                line=dict(color="#1A237E", width=2),
+                marker=dict(size=9, color="#1A237E", line=dict(width=1, color="white")),
+                hovertemplate="%{x}<br>BMI: %{y}<extra></extra>"
+            )
+        )
+        trend_fig.add_hrect(y0=18.5, y1=24.9, fillcolor="#81c784", opacity=0.15, line_width=0,
+                             annotation_text="Healthy range", annotation_position="top left")
+        trend_fig.update_layout(
+            height=320,
+            margin=dict(l=20, r=20, t=30, b=60),
+            yaxis_title="BMI",
+            xaxis=dict(showgrid=False, tickangle=-30),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            showlegend=False
+        )
+        st.plotly_chart(trend_fig, use_container_width=True, key="bmi_trend_chart")
+        st.caption(f"{len(hist)} logged entr{'y' if len(hist) == 1 else 'ies'}. Click 'Log This BMI' any time to add another point.")
+    else:
+        st.info("No entries logged yet. Click '💾 Log This BMI' above to start tracking your BMI over time.")
 
 # =====================================================
 # Home Page
@@ -2755,130 +2928,94 @@ with tab_diabetes:
                     )
 
     # =====================================================
-    # FILE UPLOAD
+    # FILE UPLOAD (Strict: No zero replacement)
     # =====================================================
     if st.session_state.mode == "upload":
-        # Check if there's an upload error
-        if (
-            "upload_error" in st.session_state
-            and st.session_state.upload_error
-        ):
-            st.markdown(
-                f"""
-                <div class="error-box">
-                    <div class="error-title">
-                        ❌ File Upload Error
-                    </div>
-
-                    <div class="error-message">
-                        {st.session_state.upload_error}
-                    </div>
-
-                    <div class="error-solution">
-                        <strong>💡 How to fix this:</strong><br>
-                        • Make sure your file is CSV or Excel format<br>
-                        • Check that all required columns exist<br>
-                        • Make sure the file is not empty or corrupted
-                    </div>
+        # Check if there's an upload error in session state
+        if "upload_error" in st.session_state and st.session_state.upload_error:
+            # Display error with solution options
+            st.markdown(f"""
+            <div class="error-box">
+                <div class="error-title">❌ File Upload Error</div>
+                <div class="error-message">{st.session_state.upload_error}</div>
+                <div class="error-solution">
+                    <strong>💡 How to fix this:</strong><br>
+                    • Make sure your file is in CSV or Excel format (.csv, .xlsx, .xls)<br>
+                    • Check that your file contains the required columns:<br>
+                    <code>Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age</code><br>
+                    • Make sure the file is not empty or corrupted
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
-
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Options to resolve the error
             col1, col2 = st.columns(2)
-
+            
             with col1:
-                if st.button(
-                    "📁 Upload Again",
-                    use_container_width=True
-                ):
+                if st.button("📁 Upload Again", use_container_width=True):
                     del st.session_state.upload_error
                     st.session_state.uploader_key = str(uuid.uuid4())
                     st.rerun()
-
+            
             with col2:
-                if st.button(
-                    "✏️ Switch to Manual Input",
-                    use_container_width=True
-                ):
+                if st.button("✏️ Switch to Manual Input", use_container_width=True):
                     del st.session_state.upload_error
                     st.session_state.mode = "manual"
                     st.rerun()
-
+            
             st.stop()
-
-        # Check data validation error
-        if (
-            "upload_data_error" in st.session_state
-            and st.session_state.upload_data_error
-        ):
-            st.markdown(
-                f"""
-                <div class="error-box">
-                    <div class="error-title">
-                        ❌ Data Validation Error
-                    </div>
-
-                    <div class="error-message">
-                        {st.session_state.upload_data_error}
-                    </div>
-
-                    <div class="error-solution">
-                        <strong>💡 How to fix this:</strong><br>
-                        • Check that all values are within valid ranges<br>
-                        • Check for missing/null values<br>
-                        • Ensure all required fields are present
-                    </div>
+        
+        # Check if there's a data validation error
+        if "upload_data_error" in st.session_state and st.session_state.upload_data_error:
+            # Display error with solution options
+            st.markdown(f"""
+            <div class="error-box">
+                <div class="error-title">❌ Data Validation Error</div>
+                <div class="error-message">{st.session_state.upload_data_error}</div>
+                <div class="error-solution">
+                    <strong>💡 How to fix this:</strong><br>
+                    • Make sure all values are within valid ranges (no zero values allowed)<br>
+                    • Check for missing or null values in your data<br>
+                    • Ensure all required fields are filled correctly<br>
+                    • <strong>Important:</strong> Zero values are not accepted. Please provide valid measurements.
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
-
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Options to resolve the error
             col1, col2 = st.columns(2)
-
+            
             with col1:
-                if st.button(
-                    "📁 Upload New File",
-                    use_container_width=True,
-                    key="upload_new_file"
-                ):
+                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file"):
                     del st.session_state.upload_data_error
                     st.session_state.uploader_key = str(uuid.uuid4())
                     st.rerun()
-
+            
             with col2:
-                if st.button(
-                    "✏️ Switch to Manual Input",
-                    use_container_width=True,
-                    key="switch_to_manual_error"
-                ):
+                if st.button("✏️ Switch to Manual Input", use_container_width=True, key="switch_to_manual_error"):
                     del st.session_state.upload_data_error
                     st.session_state.mode = "manual"
                     st.rerun()
-
+            
             st.stop()
-
-        # File uploader
-        uploader_key = st.session_state.get(
-            "uploader_key",
-            str(uuid.uuid4())
-        )
-
+        
+        # File uploader with unique key
+        uploader_key = st.session_state.get("uploader_key", str(uuid.uuid4()))
+        
         uploaded_file = st.file_uploader(
             "📤 Upload CSV or Excel File",
             type=["csv", "xlsx", "xls"],
-            help="Upload a CSV or Excel file with the required columns.",
+            help="Upload a CSV or Excel file with the required columns. Zero values are not accepted.",
             key=uploader_key
         )
-
+        
         if uploaded_file is not None:
             try:
-                # Read file
                 if uploaded_file.name.lower().endswith(".csv"):
                     df = pd.read_csv(uploaded_file)
                 else:
                     df = pd.read_excel(uploaded_file)
-
+                
                 required_columns = [
                     "Pregnancies",
                     "Glucose",
@@ -2889,161 +3026,79 @@ with tab_diabetes:
                     "DiabetesPedigreeFunction",
                     "Age"
                 ]
-
-                # Check columns
+                
                 missing_columns = [
-                    col
-                    for col in required_columns
+                    col for col in required_columns
                     if col not in df.columns
                 ]
-
+                
                 if missing_columns:
-                    st.session_state.upload_error = (
-                        "Missing required columns: "
-                        + ", ".join(missing_columns)
-                    )
+                    st.session_state.upload_error = f"Missing required columns: {', '.join(missing_columns)}"
                     st.rerun()
-
-                # Validate data
-                validation_errors = validate_uploaded_data(df)
-
-                if validation_errors:
-                    st.session_state.upload_data_error = "\n".join(
-                        validation_errors
-                    )
-                    st.rerun()
-
-                # Display uploaded data
-                st.subheader("📊 Uploaded Data")
-                st.dataframe(
-                    df,
-                    use_container_width=True
-                )
-
-                # Prediction button
-                if st.button(
-                    "🚀 Predict Uploaded Data",
-                    use_container_width=True
-                ):
-                    with st.spinner("Making predictions..."):
-
-                        results = []
-                        df_processed = df.copy()
-                        debug_rows = []
-
-                        for idx, row in df.iterrows():
-
-                            patient = pd.DataFrame(
-                                [row[required_columns]]
-                            )
-
-                            (
-                                prediction,
-                                diabetes_prob,
-                                healthy_prob,
-                                raw_values
-                            ) = predict_patient_upload(patient)
-
-                            if prediction is not None:
-
-                                results.append({
-                                    "Prediction": prediction,
-                                    "Diabetes_Probability": (
-                                        diabetes_prob
-                                        if diabetes_prob is not None
-                                        else 0
-                                    ),
-                                    "Healthy_Probability": (
-                                        healthy_prob
-                                        if healthy_prob is not None
-                                        else 0
-                                    ),
-                                    "Risk_Level": (
-                                        get_risk_level(diabetes_prob)
-                                        if diabetes_prob is not None
-                                        else "Unknown"
-                                    )
-                                })
-
-                                # Add prediction to history
-                                add_to_history(
-                                    row.to_dict(),
-                                    prediction,
-                                    diabetes_prob
-                                )
-
-                                # Debug information
-                                debug_entry = {
-                                    "Row": idx + 1
-                                }
-
-                                for col in required_columns:
-                                    debug_entry[
-                                        f"raw_{col}"
-                                    ] = row[col]
-
-                                debug_entry[
-                                    "Diabetes_Prob_%"
-                                ] = (
-                                    round(diabetes_prob, 2)
-                                    if diabetes_prob is not None
-                                    else None
-                                )
-
-                                debug_rows.append(debug_entry)
-
-                            else:
-                                results.append({
-                                    "Prediction": None,
-                                    "Diabetes_Probability": None,
-                                    "Healthy_Probability": None,
-                                    "Risk_Level": "Error"
-                                })
-
-                        # Create results dataframe
-                        result_df = pd.DataFrame(results)
-
-                        df["Prediction"] = result_df[
-                            "Prediction"
-                        ].apply(
-                            lambda x:
-                            "Diabetes"
-                            if x == 1
-                            else "No Diabetes"
-                            if x == 0
-                            else "Error"
-                        )
-
-                        df["Diabetes_Probability"] = (
-                            result_df["Diabetes_Probability"]
-                        )
-
-                        df["Risk_Level"] = result_df[
-                            "Risk_Level"
-                        ]
-
-                        # Save results
-                        st.session_state.upload_prediction_done = True
-                        st.session_state.upload_results_df = df
-                        st.session_state.upload_results = results
-                        st.session_state.upload_original_df = df_processed
-                        st.session_state.upload_debug_rows = debug_rows
-
+                else:
+                    # Validate data values - STRICT (no zeros)
+                    validation_errors = validate_uploaded_data(df)
+                    
+                    if validation_errors:
+                        # Join errors with line breaks for better display
+                        error_message = "\n".join(validation_errors)
+                        st.session_state.upload_data_error = error_message
                         st.rerun()
-
-            except pd.errors.EmptyDataError:
-                st.session_state.upload_error = (
-                    "The uploaded file is empty. "
-                    "Please upload a valid file."
-                )
-                st.rerun()
-
-            except Exception as e:
-                st.session_state.upload_error = (
-                    f"Error reading file: {str(e)}"
-                )
-                st.rerun()
-
+                    
+                    # If we get here, data is valid
+                    st.subheader("📊 Uploaded Data")
+                    st.dataframe(df, use_container_width=True)
+                    
+                    if st.button("🚀 Predict Uploaded Data", use_container_width=True):
+                        with st.spinner("Making predictions..."):
+                            # Process each row - NO zero replacement
+                            results = []
+                            df_processed = df.copy()
+                            
+                            debug_rows = []
+                            for idx, row in df.iterrows():
+                                patient = pd.DataFrame([row[required_columns]])
+                                prediction, diabetes_prob, healthy_prob, raw_values = predict_patient_upload(patient)
+                                
+                                if prediction is not None:
+                                    results.append({
+                                        "Prediction": prediction,
+                                        "Diabetes_Probability": diabetes_prob if diabetes_prob is not None else 0,
+                                        "Healthy_Probability": healthy_prob if healthy_prob is not None else 0,
+                                        "Risk_Level": get_risk_level(diabetes_prob) if diabetes_prob is not None else "Unknown"
+                                    })
+                                    
+                                    # Add to history
+                                    add_to_history(row.to_dict(), prediction, diabetes_prob)
+                                    
+                                    # Capture debug info: raw feature values actually fed to the model
+                                    debug_entry = {"Row": idx + 1}
+                                    for col in required_columns:
+                                        debug_entry[f"raw_{col}"] = row[col]
+                                    debug_entry["Diabetes_Prob_%"] = round(diabetes_prob, 2) if diabetes_prob is not None else None
+                                    debug_rows.append(debug_entry)
+                                else:
+                                    results.append({
+                                        "Prediction": None,
+                                        "Diabetes_Probability": None,
+                                        "Healthy_Probability": None,
+                                        "Risk_Level": "Error"
+                                    })
+                            
+                            # Add results to dataframe
+                            result_df = pd.DataFrame(results)
+                            df["Prediction"] = result_df["Prediction"].apply(lambda x: "Diabetes" if x == 1 else "No Diabetes" if x == 0 else "Error")
+                            df["Diabetes_Probability"] = result_df["Diabetes_Probability"]
+                            df["Risk_Level"] = result_df["Risk_Level"]
+                            
+                            # Store in session state for display
+                            st.session_state.upload_prediction_done = True
+                            st.session_state.upload_results_df = df
+                            st.session_state.upload_results = results
+                            st.session_state.upload_original_df = df_processed
+                            st.session_state.upload_debug_rows = debug_rows
+                            
+                            st.rerun()
             
             except pd.errors.EmptyDataError:
                 st.session_state.upload_error = "The uploaded file is empty. Please upload a valid file."
