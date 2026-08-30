@@ -3091,7 +3091,7 @@ with tab_diabetes:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file"):
+                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file_2"):
                     del st.session_state.upload_data_error
                     st.session_state.uploader_key = str(uuid.uuid4())
                     st.rerun()
