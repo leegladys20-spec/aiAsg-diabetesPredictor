@@ -78,11 +78,26 @@ header {
 }
 
 /* Main Title */
+@keyframes titleShimmer {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+@keyframes titleRiseIn {
+    0%   { transform: translateY(-14px); opacity: 0; }
+    100% { transform: translateY(0px); opacity: 1; }
+}
+
 .main-title {
     text-align: center;
-    color: #1A237E;
     font-size: 48px;
     font-weight: 800;
+    background: linear-gradient(90deg, #1A237E, #4a5bd6, #1A237E, #283593);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titleShimmer 6s linear infinite, titleRiseIn 0.6s ease-out;
 }
 
 .sub-title {
@@ -92,11 +107,23 @@ header {
     margin-bottom: 40px;
 }
 
+@keyframes cardFadeInUp {
+    0%   { transform: translateY(16px); opacity: 0; }
+    100% { transform: translateY(0px); opacity: 1; }
+}
+
 .card {
     background: white;
     padding: 25px;
     border-radius: 18px;
     box-shadow: 0px 5px 20px rgba(0,0,0,.08);
+    animation: cardFadeInUp 0.5s ease-out;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0px 10px 28px rgba(0,0,0,.12);
 }
 
 .section {
@@ -470,6 +497,60 @@ div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
     animation: bmiFloat 2.2s ease-in-out infinite;
     font-size: 42px;
     line-height: 1;
+}
+
+/* ============================================= */
+/* Global Cute Animations (reusable everywhere) */
+/* ============================================= */
+@keyframes popIn {
+    0%   { transform: scale(0.85); opacity: 0; }
+    60%  { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes softPulseGreen {
+    0%   { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 0 rgba(46, 125, 50, 0.35); }
+    70%  { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 14px rgba(46, 125, 50, 0); }
+    100% { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 0 rgba(46, 125, 50, 0); }
+}
+
+@keyframes softPulseRed {
+    0%   { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 0 rgba(198, 40, 40, 0.35); }
+    70%  { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 14px rgba(198, 40, 40, 0); }
+    100% { box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 0 0 0 rgba(198, 40, 40, 0); }
+}
+
+.result-badge {
+    padding: 22px 20px;
+    border-radius: 16px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-bottom: 10px;
+}
+
+.result-badge.healthy {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), softPulseGreen 2.4s ease-out 0.5s 2;
+}
+
+.result-badge.risk {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), softPulseRed 2.4s ease-out 0.5s 2;
+}
+
+.icon-bounce {
+    display: inline-block;
+    animation: bmiFloat 2.4s ease-in-out infinite;
+}
+
+.fade-in-up {
+    animation: cardFadeInUp 0.55s ease-out;
 }
 
 /* File Uploader */
@@ -3357,9 +3438,16 @@ with tab_diabetes:
             st.subheader("📊 Prediction Result")
             
             if prediction == 1:
-                st.error("🔴 **Diabetes Detected**")
+                st.markdown(
+                    "<div class='result-badge risk'>🔴 Diabetes Detected</div>",
+                    unsafe_allow_html=True
+                )
             else:
-                st.success("🟢 **No Diabetes Detected**")
+                st.markdown(
+                    "<div class='result-badge healthy'>🟢 No Diabetes Detected</div>",
+                    unsafe_allow_html=True
+                )
+                st.balloons()
             
             if diabetes_prob is not None:
                 col_a, col_b = st.columns(2)
