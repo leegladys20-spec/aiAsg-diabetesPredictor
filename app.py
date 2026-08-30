@@ -637,6 +637,21 @@ div[data-testid="stForm"]:hover label p {
     margin-top: 2px;
 }
 
+.warning-pop.mini {
+    padding: 8px 12px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+
+.warning-pop.mini .warning-icon {
+    font-size: 22px;
+}
+
+.warning-pop.mini .warning-text {
+    font-size: 13px;
+}
+
 /* File Uploader */
 div[data-testid="stFileUploader"] button {
     background: #f0f2f6 !important;
@@ -3498,6 +3513,16 @@ with tab_diabetes:
                 with cols[col_idx]:
                     if results[i]["Diabetes_Probability"] is not None:
                         st.markdown(f"**Patient {i+1}**")
+                        if results[i]["Prediction"] == 1:
+                            st.markdown(
+                                """
+                                <div class='warning-pop mini'>
+                                    <div class='warning-icon'>⚠️</div>
+                                    <div class='warning-text'>Diabetes Risk</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
                         fig = create_gauge_chart(results[i]["Diabetes_Probability"])
                         if fig:
                             st.plotly_chart(fig, use_container_width=True, key=f"gauge_upload_{i}")
