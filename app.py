@@ -553,6 +553,90 @@ div[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
     animation: cardFadeInUp 0.55s ease-out;
 }
 
+/* ============================================= */
+/* Engaging Manual Input Form */
+/* ============================================= */
+div[data-testid="stForm"] {
+    background: white;
+    padding: 30px 25px;
+    border-radius: 20px;
+    box-shadow: 0px 5px 20px rgba(0,0,0,.08);
+    animation: cardFadeInUp 0.55s ease-out;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    border: 1px solid transparent;
+}
+
+div[data-testid="stForm"]:hover {
+    box-shadow: 0px 10px 28px rgba(0,0,0,.12);
+}
+
+div[data-testid="stForm"] .stNumberInput input,
+div[data-testid="stForm"] .stSlider {
+    transition: all 0.25s ease;
+}
+
+div[data-testid="stForm"] .stNumberInput input:focus {
+    border-color: #1A237E !important;
+    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.12) !important;
+    transform: scale(1.01);
+}
+
+div[data-testid="stForm"] label p {
+    transition: color 0.2s ease;
+}
+
+div[data-testid="stForm"]:hover label p {
+    color: #1A237E;
+}
+
+/* ============================================= */
+/* Warning Pop (Diabetes Result) */
+/* ============================================= */
+@keyframes warningPopShake {
+    0%   { transform: scale(0.6) rotate(0deg); opacity: 0; }
+    40%  { transform: scale(1.15) rotate(-8deg); opacity: 1; }
+    55%  { transform: scale(1.0) rotate(8deg); }
+    70%  { transform: scale(1.05) rotate(-4deg); }
+    85%  { transform: scale(1.0) rotate(2deg); }
+    100% { transform: scale(1.0) rotate(0deg); }
+}
+
+@keyframes warningGlow {
+    0%, 100% { box-shadow: 0 4px 20px rgba(198, 40, 40, 0.25); }
+    50%      { box-shadow: 0 4px 28px rgba(198, 40, 40, 0.55); }
+}
+
+.warning-pop {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #fff5f5, #ffe3e3);
+    border: 2px solid #ef5350;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    animation: warningGlow 1.8s ease-in-out infinite;
+}
+
+.warning-pop .warning-icon {
+    font-size: 40px;
+    line-height: 1;
+    animation: warningPopShake 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.warning-pop .warning-text {
+    font-size: 16px;
+    font-weight: 700;
+    color: #b71c1c;
+}
+
+.warning-pop .warning-sub {
+    font-size: 13px;
+    font-weight: 500;
+    color: #c62828;
+    margin-top: 2px;
+}
+
 /* File Uploader */
 div[data-testid="stFileUploader"] button {
     background: #f0f2f6 !important;
@@ -3330,12 +3414,18 @@ with tab_diabetes:
                             df["Diabetes_Probability"] = result_df["Diabetes_Probability"]
                             df["Risk_Level"] = result_df["Risk_Level"]
                             
+                            # Determine which celebratory / warning animations to fire
+                            has_diabetes = any(r["Prediction"] == 1 for r in results)
+                            has_healthy = any(r["Prediction"] == 0 for r in results)
+                            
                             # Store in session state for display
                             st.session_state.upload_prediction_done = True
                             st.session_state.upload_results_df = df
                             st.session_state.upload_results = results
                             st.session_state.upload_original_df = df_processed
                             st.session_state.upload_debug_rows = debug_rows
+                            st.session_state.upload_has_diabetes = has_diabetes
+                            st.session_state.upload_has_healthy = has_healthy
                             
                             st.rerun()
             
@@ -3350,6 +3440,26 @@ with tab_diabetes:
         if "upload_prediction_done" in st.session_state and st.session_state.upload_prediction_done:
             st.markdown("---")
             st.success("✅ Prediction completed!")
+            
+            has_diabetes = st.session_state.get("upload_has_diabetes", False)
+            has_healthy = st.session_state.get("upload_has_healthy", False)
+            
+            if has_diabetes:
+                st.markdown(
+                    """
+                    <div class='warning-pop'>
+                        <div class='warning-icon'>⚠️</div>
+                        <div>
+                            <div class='warning-text'>Diabetes Risk Found in Uploaded Data</div>
+                            <div class='warning-sub'>One or more patients were flagged — check the Risk_Level column below.</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            
+            if has_healthy:
+                st.balloons()
             
             # Display results with gauge charts
             results_df = st.session_state.upload_results_df
@@ -3417,6 +3527,10 @@ with tab_diabetes:
                     del st.session_state.upload_original_df
                 if "upload_debug_rows" in st.session_state:
                     del st.session_state.upload_debug_rows
+                if "upload_has_diabetes" in st.session_state:
+                    del st.session_state.upload_has_diabetes
+                if "upload_has_healthy" in st.session_state:
+                    del st.session_state.upload_has_healthy
                 st.session_state.uploader_key = str(uuid.uuid4())
                 st.rerun()
     
@@ -3438,6 +3552,18 @@ with tab_diabetes:
             st.subheader("📊 Prediction Result")
             
             if prediction == 1:
+                st.markdown(
+                    """
+                    <div class='warning-pop'>
+                        <div class='warning-icon'>⚠️</div>
+                        <div>
+                            <div class='warning-text'>High Diabetes Risk Detected</div>
+                            <div class='warning-sub'>Please review the recommendations below and consult a healthcare professional.</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
                 st.markdown(
                     "<div class='result-badge risk'>🔴 Diabetes Detected</div>",
                     unsafe_allow_html=True
