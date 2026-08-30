@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import numpy as np
 import joblib  # Using joblib instead of pickle to fix the STACK_GLOBAL error
 import plotly.graph_objects as go
 import os
@@ -935,6 +936,163 @@ def display_recommendation(prediction):
         - Get annual health checkups
         - Practice healthy lifestyle habits
         """)
+
+# =====================================================
+# Diabetes Prediction Tab — Enhancement Helpers
+# =====================================================
+REFERENCE_RANGES = {
+    "Glucose": (70, 140, "mg/dL"),
+    "BloodPressure": (60, 80, "mmHg"),
+    "SkinThickness": (10, 40, "mm"),
+    "Insulin": (16, 166, "mu U/ml"),
+    "BMI": (18.5, 24.9, "kg/m²"),
+}
+
+WHAT_IF_FEATURE_RANGES = {
+    "Glucose": (40.0, 300.0, False),
+    "BMI": (10.0, 60.0, True),
+    "Age": (1.0, 100.0, False),
+    "BloodPressure": (40.0, 140.0, False),
+    "Insulin": (0.0, 600.0, False),
+    "SkinThickness": (0.0, 80.0, False),
+    "DiabetesPedigreeFunction": (0.01, 2.5, True),
+    "Pregnancies": (0.0, 15.0, False),
+}
+
+
+def risk_factor_breakdown(patient_df):
+    """Compare each key measurement to a typical healthy adult reference range."""
+    st.markdown("### 🧭 Risk Factor Breakdown")
+    st.caption("How each measurement compares to typical healthy-adult reference ranges.")
+
+    cols = st.columns(len(REFERENCE_RANGES))
+    for col, (feature, (lo, hi, unit)) in zip(cols, REFERENCE_RANGES.items()):
+        val = patient_df[feature].iloc[0]
+
+        if val < lo:
+            status, color, icon = "Low", "#4fc3f7", "⬇️"
+        elif val > hi:
+            status, color, icon = "High", "#ef5350", "⬆️"
+        else:
+            status, color, icon = "Normal", "#66bb6a", "✅"
+
+        with col:
+            st.markdown(
+                f"""
+                <div class="insight-stat-card" style="border-top-color:{color};">
+                    <div class="insight-stat-icon">{icon}</div>
+                    <div class="insight-stat-value" style="font-size:22px;">{val:g}</div>
+                    <div class="insight-stat-label">{feature}</div>
+                    <div style="color:{color}; font-weight:700; font-size:12px; margin-top:4px;">{status}</div>
+                    <div style="color:#999; font-size:10.5px; margin-top:2px;">Normal: {lo}-{hi} {unit}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+def what_if_section(patient_df):
+    """Let the user explore how changing one input shifts the predicted risk."""
+    if not hasattr(model, "predict_proba"):
+        return
+
+    st.markdown("### 🔬 What-If Explorer")
+    st.caption("See how changing one factor affects the predicted risk, with everything else held constant.")
+
+    feature = st.selectbox(
+        "Explore how changing...",
+        list(WHAT_IF_FEATURE_RANGES.keys()),
+        key="whatif_feature"
+    )
+    lo, hi, is_float = WHAT_IF_FEATURE_RANGES[feature]
+    current_val = float(patient_df[feature].iloc[0])
+
+    slider_val = st.slider(
+        f"Try a different {feature} value",
+        min_value=float(lo),
+        max_value=float(hi),
+        value=float(current_val),
+        step=0.1 if is_float else 1.0,
+        key="whatif_slider"
+    )
+
+    # Baseline probability at the original submitted values
+    original_prob = model.predict_proba(patient_df)[0][1] * 100
+
+    # Probability at the slider's chosen value
+    modified = patient_df.copy()
+    modified[feature] = slider_val
+    new_prob = model.predict_proba(modified)[0][1] * 100
+
+    # Build a smooth curve across the feature's plausible range
+    n_points = 40
+    xs = np.linspace(lo, hi, n_points)
+    curve_df = pd.concat([patient_df] * n_points, ignore_index=True)
+    curve_df[feature] = xs
+    ys = model.predict_proba(curve_df)[:, 1] * 100
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode="lines",
+        line=dict(color="#1A237E", width=3),
+        name="Predicted risk curve"
+    ))
+    fig.add_trace(go.Scatter(
+        x=[current_val], y=[original_prob], mode="markers",
+        marker=dict(size=13, color="#4CAF50", line=dict(width=2, color="white")),
+        name="Your original value"
+    ))
+    fig.add_trace(go.Scatter(
+        x=[slider_val], y=[new_prob], mode="markers",
+        marker=dict(size=15, color="#F44336", symbol="star", line=dict(width=1, color="white")),
+        name="What-if value"
+    ))
+    fig.update_layout(
+        height=360,
+        margin=dict(l=20, r=20, t=20, b=60),
+        xaxis_title=feature,
+        yaxis_title="Diabetes Probability (%)",
+        yaxis=dict(range=[0, 100], gridcolor="#eee"),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5)
+    )
+    st.plotly_chart(fig, use_container_width=True, key="whatif_chart")
+
+    delta = new_prob - original_prob
+    arrow = "🔺" if delta > 0.05 else ("🔻" if delta < -0.05 else "➖")
+    st.metric(
+        f"{arrow} Risk if {feature} = {slider_val:g}",
+        f"{new_prob:.1f}%",
+        delta=f"{delta:+.1f}% vs. original"
+    )
+
+
+def generate_patient_report(patient_df, prediction, diabetes_prob, healthy_prob):
+    """Build a plain-text summary report for a single patient's prediction."""
+    lines = [
+        "DIABETES RISK ASSESSMENT REPORT",
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+        "Patient Measurements:",
+    ]
+    for col in patient_df.columns:
+        lines.append(f"  - {col}: {patient_df[col].iloc[0]}")
+
+    lines.append("")
+    lines.append(f"Prediction: {'Diabetes Detected' if prediction == 1 else 'No Diabetes Detected'}")
+    if diabetes_prob is not None:
+        lines.append(f"Diabetes Probability: {diabetes_prob:.2f}%")
+        lines.append(f"Healthy Probability: {healthy_prob:.2f}%")
+        lines.append(f"Risk Level: {get_risk_level(diabetes_prob)}")
+
+    lines.append("")
+    lines.append(
+        "Disclaimer: This report is generated by a machine learning model "
+        "and is not a medical diagnosis. Please consult a healthcare "
+        "professional for medical advice."
+    )
+    return "\n".join(lines)
 
 def add_to_history(patient_data, prediction, diabetes_prob):
     """Add prediction to history"""
@@ -3235,5 +3393,28 @@ with tab_diabetes:
         
         st.markdown("---")
         
+        # Risk Factor Breakdown — compares inputs against healthy reference ranges
+        risk_factor_breakdown(patient)
+        
+        st.markdown("---")
+        
+        # What-If Explorer — live sensitivity chart for a chosen feature
+        what_if_section(patient)
+        
+        st.markdown("---")
+        
         # Recommendations
         display_recommendation(prediction)
+        
+        st.markdown("---")
+        
+        # Downloadable per-patient report
+        report_text = generate_patient_report(patient, prediction, diabetes_prob, healthy_prob)
+        st.download_button(
+            "📄 Download Patient Report",
+            report_text,
+            f"diabetes_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            "text/plain",
+            use_container_width=True
+        )
+
