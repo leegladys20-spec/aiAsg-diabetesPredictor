@@ -2864,13 +2864,6 @@ with tab_diabetes:
             str(uuid.uuid4())
         )
 
-        uploaded_file = st.file_uploader(
-            "📤 Upload CSV or Excel File",
-            type=["csv", "xlsx", "xls"],
-            help="Upload a CSV or Excel file with the required columns.",
-            key=uploader_key
-        )
-
         if uploaded_file is not None:
             try:
                 # Read file
@@ -3104,7 +3097,7 @@ with tab_diabetes:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file"):
+                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file_2"):
                     del st.session_state.upload_data_error
                     st.session_state.uploader_key = str(uuid.uuid4())
                     st.rerun()
