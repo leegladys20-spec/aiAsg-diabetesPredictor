@@ -185,21 +185,6 @@ div.stForm button:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* Primary Button (Predict) - matches indigo theme instead of Streamlit's default red */
-div.stForm button[kind="primary"],
-div.stButton button[kind="primary"] {
-    background: linear-gradient(90deg, #1A237E, #283593);
-    color: #ffffff;
-    border: none;
-}
-
-div.stForm button[kind="primary"]:hover,
-div.stButton button[kind="primary"]:hover {
-    background: linear-gradient(90deg, #283593, #1A237E);
-    box-shadow: 0 4px 14px rgba(26, 35, 126, 0.35);
-    transform: translateY(-1px);
-}
-
 /* ============================================= */
 /* BMI Calculator - Bigger Inputs */
 /* ============================================= */
@@ -3099,7 +3084,6 @@ with tab_diabetes:
             left, right = st.columns(2)
             
             with left:
-                st.markdown("##### 👤 Patient History")
                 pregnancies = st.slider(
                     "👶 Pregnancies",
                     0,
@@ -3108,7 +3092,6 @@ with tab_diabetes:
                     help="Number of pregnancies"
                 )
                 
-                st.markdown("##### 🩺 Vitals")
                 glucose = st.number_input(
                     "🩸 Glucose (mg/dL)",
                     min_value=0,
@@ -3116,7 +3099,6 @@ with tab_diabetes:
                     value=st.session_state.form_values["glucose"],
                     help="Glucose level in blood (0-300 mg/dL)."
                 )
-                st.caption("Normal fasting range: 70–100 mg/dL")
             
                 blood_pressure = st.number_input(
                     "❤️ Blood Pressure (mmHg)",
@@ -3125,9 +3107,7 @@ with tab_diabetes:
                     value=st.session_state.form_values["blood_pressure"],
                     help="Diastolic blood pressure (0-200 mmHg)."
                 )
-                st.caption("Normal diastolic range: 60–80 mmHg")
                 
-                st.markdown("##### 📏 Body Metrics")
                 skin = st.number_input(
                     "📏 Skin Thickness (mm)",
                     min_value=0,
@@ -3136,10 +3116,8 @@ with tab_diabetes:
                     step=1,
                     help="Triceps skin fold thickness (0-99 mm)."
                 )
-                st.caption("Typical range: 10–40 mm")
             
             with right:
-                st.markdown("##### 📈 Other Indicators")
                 insulin = st.number_input(
                     "💉 Insulin (mu U/ml)",
                     min_value=0,
@@ -3147,7 +3125,6 @@ with tab_diabetes:
                     value=st.session_state.form_values["insulin"],
                     help="2-Hour serum insulin (0-900)."
                 )
-                st.caption("Normal 2-hr range: 16–166 mu U/ml")
                 
                 bmi = st.number_input(
                     "⚖️ BMI",
@@ -3157,7 +3134,6 @@ with tab_diabetes:
                     step=0.1,
                     help="Body Mass Index (0-100)."
                 )
-                st.caption("Healthy range: 18.5–24.9")
                 
                 dpf = st.number_input(
                     "📊 Diabetes Pedigree Function",
@@ -3167,7 +3143,6 @@ with tab_diabetes:
                     step=0.01,
                     help="Diabetes pedigree function (0.01-3.0)"
                 )
-                st.caption("Reflects family history of diabetes — higher means stronger genetic link")
                 
                 age = st.number_input(
                     "🎂 Age",
@@ -3180,7 +3155,7 @@ with tab_diabetes:
             col1, col2 = st.columns(2)
             
             with col1:
-                predict = st.form_submit_button("🔍 Predict Diabetes", use_container_width=True, type="primary")
+                predict = st.form_submit_button("🔍 Predict Diabetes", use_container_width=True)
             
             with col2:
                 reset = st.form_submit_button("🔄 Reset Form", use_container_width=True)
