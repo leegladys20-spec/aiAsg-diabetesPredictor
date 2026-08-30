@@ -2857,6 +2857,149 @@ with tab_diabetes:
                     st.rerun()
 
             st.stop()
+
+        # File uploader
+        uploader_key = st.session_state.get(
+            "uploader_key",
+            str(uuid.uuid4())
+        )
+
+        uploaded_file = st.file_uploader(
+            "📤 Upload CSV or Excel File",
+            type=["csv", "xlsx", "xls"],
+            help="Upload a CSV or Excel file with the required columns.",
+            key=uploader_key
+        )
+
+        if uploaded_file is not None:
+            try:
+                # Read file
+                if uploaded_file.name.lower().endswith(".csv"):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+
+                required_columns = [
+                    "Pregnancies",
+                    "Glucose",
+                    "BloodPressure",
+                    "SkinThickness",
+                    "Insulin",
+                    "BMI",
+                    "DiabetesPedigreeFunction",
+                    "Age"
+                ]
+
+                # Check columns
+                missing_columns = [
+                    col
+                    for col in required_columns
+                    if col not in df.columns
+                ]
+
+                if missing_columns:
+                    st.session_state.upload_error = (
+                        "Missing required columns: "
+                        + ", ".join(missing_columns)
+                    )
+                    st.rerun()
+
+                # Validate data
+                validation_errors = validate_uploaded_data(df)
+
+                if validation_errors:
+                    st.session_state.upload_data_error = "\n".join(
+                        validation_errors
+                    )
+                    st.rerun()
+
+                # Display uploaded data
+                st.subheader("📊 Uploaded Data")
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
+
+                # Prediction button
+                if st.button(
+                    "🚀 Predict Uploaded Data",
+                    use_container_width=True
+                ):
+                    with st.spinner("Making predictions..."):
+
+                        results = []
+                        df_processed = df.copy()
+                        debug_rows = []
+
+                        for idx, row in df.iterrows():
+
+                            patient = pd.DataFrame(
+                                [row[required_columns]]
+                            )
+
+                            (
+                                prediction,
+                                diabetes_prob,
+                                healthy_prob,
+                                raw_values
+                            ) = predict_patient_upload(patient)
+
+                            if prediction is not None:
+
+                                results.append({
+                                    "Prediction": prediction,
+                                    "Diabetes_Probability": (
+                                        diabetes_prob
+                                        if diabetes_prob is not None
+                                        else 0
+                                    ),
+                                    "Healthy_Probability": (
+                                        healthy_prob
+                                        if healthy_prob is not None
+                                        else 0
+                                    ),
+                                    "Risk_Level": (
+                                        get_risk_level(diabetes_prob)
+                                        if diabetes_prob is not None
+                                        else "Unknown"
+                                    )
+                                })
+
+                                # Add prediction to history
+                                add_to_history(
+                                    row.to_dict(),
+                                    prediction,
+                                    diabetes_prob
+                                )
+
+                                # Debug information
+                                debug_entry = {
+                                    "Row": idx + 1
+                                }
+
+                                for col in required_columns:
+                                    debug_entry[
+                                        f"raw_{col}"
+                                    ] = row[col]
+
+                                debug_entry[
+                                    "Diabetes_Prob_%"
+                                ] = (
+                                    round(diabetes_prob, 2)
+                                    if diabetes_prob is not None
+                                    else None
+                                )
+
+                                debug_rows.append(debug_entry)
+
+                            else:
+                                results.append({
+                                    "Prediction": None,
+                                    "Diabetes_Probability": None,
+                                    "Healthy_Probability": None,
+                                    "Risk_Level": "Error"
+                                })
+
                         # Create results dataframe
                         result_df = pd.DataFrame(results)
 
@@ -2961,7 +3104,7 @@ with tab_diabetes:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file_2"):
+                if st.button("📁 Upload New File", use_container_width=True, key="upload_new_file"):
                     del st.session_state.upload_data_error
                     st.session_state.uploader_key = str(uuid.uuid4())
                     st.rerun()
