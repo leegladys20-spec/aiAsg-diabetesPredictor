@@ -92,12 +92,25 @@ header {
     text-align: center;
     font-size: 48px;
     font-weight: 800;
+    animation: titleRiseIn 0.6s ease-out;
+}
+
+.main-title .title-gradient-text {
     background: linear-gradient(90deg, #1A237E, #4a5bd6, #1A237E, #283593);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: titleShimmer 6s linear infinite, titleRiseIn 0.6s ease-out;
+    animation: titleShimmer 6s linear infinite;
+}
+
+.main-title .title-emoji {
+    /* Keep emoji in their native full color instead of the
+       transparent gradient-clip fill used for the title text */
+    -webkit-text-fill-color: initial;
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
 }
 
 .sub-title {
@@ -692,6 +705,13 @@ div[data-testid="stDownloadButton"] button:hover {
 .feature-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+/* Innovation cards get extra vertical breathing room */
+.innovation-card {
+    padding-top: 45px;
+    padding-bottom: 45px;
+    margin-bottom: 20px;
 }
 
 .feature-icon {
@@ -1826,7 +1846,7 @@ def bmi_calculator():
 # =====================================================
 def home_page():
     st.markdown(
-        "<h1 class='main-title'>🏥 Diabetes Prediction System</h1>",
+        "<h1 class='main-title'><span class='title-emoji'>🏥</span> <span class='title-gradient-text'>Diabetes Prediction System</span></h1>",
         unsafe_allow_html=True
     )
     
@@ -1834,7 +1854,129 @@ def home_page():
         "<p class='sub-title'>An AI-powered tool for early diabetes risk assessment and health monitoring</p>",
         unsafe_allow_html=True
     )
-    
+
+    # Meet the Team Section
+    st.markdown("### 👥 Meet the Team")
+
+    team_col1, team_col2, team_col3 = st.columns(3)
+
+    with team_col1:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🧑‍💻</div>
+            <div class="feature-title">Lau Kai Hang</div>
+            <div class="feature-desc">
+                KNN &amp; Tuned KNN
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with team_col2:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🧑‍💻</div>
+            <div class="feature-title">Ng Kai Seng</div>
+            <div class="feature-desc">
+                SVM &amp; Tuned SVM
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with team_col3:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">👩‍💻</div>
+            <div class="feature-title">Gladys Lee</div>
+            <div class="feature-desc">
+                Random Forest &amp; Tuned RF
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Innovation Section
+    st.markdown("### 💡 Innovation")
+    st.markdown(
+        "<p style='color:#555; font-size:15px; margin-top:-8px; margin-bottom:20px;'>"
+        "Here's what we built under the hood to make predictions accurate and trustworthy:</p>",
+        unsafe_allow_html=True
+    )
+
+    innov_col1, innov_col2, innov_col3 = st.columns(3)
+
+    with innov_col1:
+        st.markdown("""
+        <div class="feature-card innovation-card">
+            <div class="feature-icon">🎛️</div>
+            <div class="feature-title">Hyperparameter Tuning</div>
+            <div class="feature-desc">
+                Each model was systematically tuned to maximize performance.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col2:
+        st.markdown("""
+        <div class="feature-card innovation-card">
+            <div class="feature-icon">🔁</div>
+            <div class="feature-title">5-Fold Stratified Cross-Validation</div>
+            <div class="feature-desc">
+                Ensures robust, reliable evaluation across balanced data splits.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col3:
+        st.markdown("""
+        <div class="feature-card innovation-card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-title">LOF Outlier Detection</div>
+            <div class="feature-desc">
+                Local Outlier Factor used to identify and handle anomalous data points.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+
+    innov_col4, innov_col5, innov_col6 = st.columns(3)
+
+    with innov_col4:
+        st.markdown("""
+        <div class="feature-card innovation-card">
+            <div class="feature-icon">📏</div>
+            <div class="feature-title">Multiple Scaler Comparison</div>
+            <div class="feature-desc">
+                Compared multiple scaling techniques to find the best fit for each model.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col5:
+        st.markdown("""
+        <div class="feature-card innovation-card">
+            <div class="feature-icon">📈</div>
+            <div class="feature-title">ROC-AUC Analysis</div>
+            <div class="feature-desc">
+                Evaluated each model's ability to distinguish diabetic from healthy cases.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col6:
+        st.markdown("""
+        <div class="feature-card innovation-card">
+            <div class="feature-icon">⭐</div>
+            <div class="feature-title">Feature Importance</div>
+            <div class="feature-desc">
+                Highlights which health indicators most influence the prediction.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
     # Features Section
     st.markdown("### 🚀 Features")
     
@@ -1907,116 +2049,12 @@ def home_page():
         - Personalized recommendations
         """)
 
-    st.markdown("---")
-
-    # Innovation Section
-    st.markdown("### 💡 Innovation")
-
-    innov_col1, innov_col2, innov_col3 = st.columns(3)
-
-    with innov_col1:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🎛️</div>
-            <div class="feature-title">Hyperparameter Tuning</div>
-            <div class="feature-desc">
-                Each model was systematically tuned to maximize performance.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with innov_col2:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🔁</div>
-            <div class="feature-title">5-Fold Stratified Cross-Validation</div>
-            <div class="feature-desc">
-                Ensures robust, reliable evaluation across balanced data splits.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with innov_col3:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🎯</div>
-            <div class="feature-title">LOF Outlier Detection</div>
-            <div class="feature-desc">
-                Local Outlier Factor used to identify and handle anomalous data points.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    innov_col4, innov_col5, _ = st.columns(3)
-
-    with innov_col4:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">📏</div>
-            <div class="feature-title">Multiple Scaler Comparison</div>
-            <div class="feature-desc">
-                Compared multiple scaling techniques to find the best fit for each model.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with innov_col5:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">⭐</div>
-            <div class="feature-title">Feature Importance</div>
-            <div class="feature-desc">
-                Highlights which health indicators most influence the prediction.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # Meet the Team Section
-    st.markdown("### 👥 Meet the Team")
-
-    team_col1, team_col2, team_col3 = st.columns(3)
-
-    with team_col1:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🧑‍💻</div>
-            <div class="feature-title">Lau Kai Hang</div>
-            <div class="feature-desc">
-                KNN &amp; Tuned KNN
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with team_col2:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🧑‍💻</div>
-            <div class="feature-title">Ng Kai Seng</div>
-            <div class="feature-desc">
-                SVM &amp; Tuned SVM
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with team_col3:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🧑‍💻</div>
-            <div class="feature-title">Gladys Lee</div>
-            <div class="feature-desc">
-                Random Forest &amp; Tuned RF
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
 # =====================================================
 # History Page
 # =====================================================
 def history_page():
     st.markdown(
-        "<h1 class='main-title'>📊 Prediction History</h1>",
+        "<h1 class='main-title'><span class='title-emoji'>📊</span> <span class='title-gradient-text'>Prediction History</span></h1>",
         unsafe_allow_html=True
     )
     
@@ -2490,7 +2528,7 @@ def model_insights_page():
     """Display the training notebook results in a clear, presentation-ready layout."""
 
     st.markdown(
-        "<h1 class='main-title'>📈 Model Insights & Visualizations</h1>",
+        "<h1 class='main-title'><span class='title-emoji'>📈</span> <span class='title-gradient-text'>Model Insights & Visualizations</span></h1>",
         unsafe_allow_html=True
     )
 
@@ -3088,7 +3126,7 @@ with tab_insights:
 # =====================================================
 with tab_diabetes:
     st.markdown(
-        "<h1 class='main-title'>🩺 Diabetes Prediction</h1>",
+        "<h1 class='main-title'><span class='title-emoji'>🩺</span> <span class='title-gradient-text'>Diabetes Prediction</span></h1>",
         unsafe_allow_html=True
     )
     
