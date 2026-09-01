@@ -730,8 +730,9 @@ div[data-testid="stDownloadButton"] button:hover {
 }
 
 .avatar-icon svg {
-    width: 84px;
-    height: 84px;
+    width: 92px;
+    height: auto;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.10));
 }
 
 .feature-title {
@@ -1879,16 +1880,33 @@ def home_page():
         st.markdown("""
         <div class="feature-card">
             <div class="avatar-icon">
-                <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="65" r="40" fill="#FFD8B4"/>
-                    <path d="M20 55 Q20 15 60 15 Q100 15 100 55 Q100 40 90 35 Q80 20 60 20 Q40 20 30 35 Q20 40 20 55 Z" fill="#3E2723"/>
-                    <circle cx="45" cy="65" r="10" fill="#E3F2FD" stroke="#333" stroke-width="3"/>
-                    <circle cx="75" cy="65" r="10" fill="#E3F2FD" stroke="#333" stroke-width="3"/>
-                    <line x1="55" y1="65" x2="65" y2="65" stroke="#333" stroke-width="3"/>
-                    <line x1="35" y1="65" x2="22" y2="60" stroke="#333" stroke-width="3"/>
-                    <line x1="85" y1="65" x2="98" y2="60" stroke="#333" stroke-width="3"/>
-                    <path d="M48 86 Q60 96 72 86" stroke="#5D4037" stroke-width="3" fill="none" stroke-linecap="round"/>
-                    <path d="M20 112 Q60 92 100 112 L100 120 L20 120 Z" fill="#1A237E"/>
+                <svg viewBox="0 0 120 165" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="60" cy="160" rx="34" ry="5" fill="#000000" opacity="0.08"/>
+                    <rect x="42" y="126" width="14" height="28" rx="6" fill="#37474F"/>
+                    <rect x="64" y="126" width="14" height="28" rx="6" fill="#37474F"/>
+                    <ellipse cx="49" cy="156" rx="11" ry="6" fill="#212121"/>
+                    <ellipse cx="71" cy="156" rx="11" ry="6" fill="#212121"/>
+                    <line x1="36" y1="99" x2="22" y2="120" stroke="#1A237E" stroke-width="13" stroke-linecap="round"/>
+                    <line x1="24" y1="117" x2="18" y2="130" stroke="#FFD8B4" stroke-width="10" stroke-linecap="round"/>
+                    <circle cx="17" cy="132" r="6.5" fill="#FFD8B4"/>
+                    <line x1="84" y1="99" x2="98" y2="120" stroke="#1A237E" stroke-width="13" stroke-linecap="round"/>
+                    <line x1="96" y1="117" x2="102" y2="130" stroke="#FFD8B4" stroke-width="10" stroke-linecap="round"/>
+                    <circle cx="103" cy="132" r="6.5" fill="#FFD8B4"/>
+                    <path d="M34,96 Q60,86 86,96 L90,132 Q60,142 30,132 Z" fill="#1A237E"/>
+                    <rect x="53" y="86" width="14" height="14" fill="#FFD8B4"/>
+                    <ellipse cx="60" cy="60" rx="28" ry="30" fill="#FFD8B4"/>
+                    <circle cx="33" cy="62" r="6" fill="#FFD8B4"/>
+                    <circle cx="87" cy="62" r="6" fill="#FFD8B4"/>
+                    <path d="M20 50 Q16 12 60 10 Q104 12 100 50 Q84 42 60 43 Q36 42 20 50 Z" fill="#212121"/>
+                    <path d="M78,16 Q86,10 92,20 Q97,26 96,36 Q90,26 82,24 Q86,18 78,16 Z" fill="#212121"/>
+                    <rect x="39" y="56" width="18" height="14" rx="6" fill="#FAFAFA" fill-opacity="0.5" stroke="#37474F" stroke-width="3"/>
+                    <rect x="63" y="56" width="18" height="14" rx="6" fill="#FAFAFA" fill-opacity="0.5" stroke="#37474F" stroke-width="3"/>
+                    <line x1="57" y1="62" x2="63" y2="62" stroke="#37474F" stroke-width="3"/>
+                    <line x1="39" y1="60" x2="33" y2="58" stroke="#37474F" stroke-width="3"/>
+                    <line x1="81" y1="60" x2="87" y2="58" stroke="#37474F" stroke-width="3"/>
+                    <ellipse cx="40" cy="76" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+                    <ellipse cx="80" cy="76" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+                    <path d="M50,80 Q60,88 70,80" stroke="#5D4037" stroke-width="3" fill="none" stroke-linecap="round"/>
                 </svg>
             </div>
             <div class="feature-title">Lau Kai Hang</div>
@@ -1902,13 +1920,29 @@ def home_page():
         st.markdown("""
         <div class="feature-card">
             <div class="avatar-icon">
-                <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="65" r="40" fill="#FFD8B4"/>
-                    <path d="M18 58 Q15 10 60 12 Q105 10 102 58 Q95 30 60 28 Q25 30 18 58 Z" fill="#212121"/>
-                    <circle cx="45" cy="65" r="4.5" fill="#333"/>
-                    <circle cx="75" cy="65" r="4.5" fill="#333"/>
-                    <path d="M48 86 Q60 96 72 86" stroke="#5D4037" stroke-width="3" fill="none" stroke-linecap="round"/>
-                    <path d="M20 112 Q60 92 100 112 L100 120 L20 120 Z" fill="#00897B"/>
+                <svg viewBox="0 0 120 165" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="60" cy="160" rx="34" ry="5" fill="#000000" opacity="0.08"/>
+                    <rect x="42" y="126" width="14" height="28" rx="6" fill="#37474F"/>
+                    <rect x="64" y="126" width="14" height="28" rx="6" fill="#37474F"/>
+                    <ellipse cx="49" cy="156" rx="11" ry="6" fill="#212121"/>
+                    <ellipse cx="71" cy="156" rx="11" ry="6" fill="#212121"/>
+                    <line x1="36" y1="99" x2="22" y2="120" stroke="#00897B" stroke-width="13" stroke-linecap="round"/>
+                    <line x1="24" y1="117" x2="18" y2="130" stroke="#FFD8B4" stroke-width="10" stroke-linecap="round"/>
+                    <circle cx="17" cy="132" r="6.5" fill="#FFD8B4"/>
+                    <line x1="84" y1="99" x2="98" y2="120" stroke="#00897B" stroke-width="13" stroke-linecap="round"/>
+                    <line x1="96" y1="117" x2="102" y2="130" stroke="#FFD8B4" stroke-width="10" stroke-linecap="round"/>
+                    <circle cx="103" cy="132" r="6.5" fill="#FFD8B4"/>
+                    <path d="M34,96 Q60,86 86,96 L90,132 Q60,142 30,132 Z" fill="#00897B"/>
+                    <rect x="53" y="86" width="14" height="14" fill="#FFD8B4"/>
+                    <ellipse cx="60" cy="60" rx="28" ry="30" fill="#FFD8B4"/>
+                    <circle cx="33" cy="62" r="6" fill="#FFD8B4"/>
+                    <circle cx="87" cy="62" r="6" fill="#FFD8B4"/>
+                    <path d="M27 50 Q26 36 33 29 L36 38 L44 24 L47 35 L55 20 L58 33 L64 20 L68 33 L76 22 L78 35 L86 28 Q94 36 93 50 Q84 40 60 39 Q36 40 27 50 Z" fill="#212121"/>
+                    <circle cx="45" cy="60" r="4.2" fill="#2E2E2E"/>
+                    <circle cx="75" cy="60" r="4.2" fill="#2E2E2E"/>
+                    <ellipse cx="38" cy="76" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+                    <ellipse cx="82" cy="76" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+                    <path d="M50,80 Q60,89 70,80" stroke="#5D4037" stroke-width="3" fill="none" stroke-linecap="round"/>
                 </svg>
             </div>
             <div class="feature-title">Ng Kai Seng</div>
@@ -1922,15 +1956,29 @@ def home_page():
         st.markdown("""
         <div class="feature-card">
             <div class="avatar-icon">
-                <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="67" r="40" fill="#FFDFC4"/>
-                    <path d="M15 60 Q10 10 60 10 Q110 10 105 60 Q108 90 90 96 Q95 60 85 45 Q75 30 60 30 Q45 30 35 45 Q25 60 30 96 Q12 90 15 60 Z" fill="#4E342E"/>
-                    <circle cx="45" cy="70" r="4.5" fill="#333"/>
-                    <circle cx="75" cy="70" r="4.5" fill="#333"/>
-                    <path d="M40 64 Q45 59 50 64" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-                    <path d="M70 64 Q75 59 80 64" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-                    <path d="M48 90 Q60 100 72 90" stroke="#C2185B" stroke-width="3" fill="none" stroke-linecap="round"/>
-                    <path d="M20 114 Q60 94 100 114 L100 120 L20 120 Z" fill="#AD1457"/>
+                <svg viewBox="0 0 120 165" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="60" cy="160" rx="34" ry="5" fill="#000000" opacity="0.08"/>
+                    <ellipse cx="49" cy="152" rx="10" ry="5.5" fill="#3E2723"/>
+                    <ellipse cx="71" cy="152" rx="10" ry="5.5" fill="#3E2723"/>
+                    <line x1="36" y1="100" x2="24" y2="122" stroke="#AD1457" stroke-width="13" stroke-linecap="round"/>
+                    <line x1="26" y1="119" x2="20" y2="132" stroke="#FFE0C2" stroke-width="10" stroke-linecap="round"/>
+                    <circle cx="19" cy="134" r="6.5" fill="#FFE0C2"/>
+                    <line x1="84" y1="100" x2="96" y2="122" stroke="#AD1457" stroke-width="13" stroke-linecap="round"/>
+                    <line x1="94" y1="119" x2="100" y2="132" stroke="#FFE0C2" stroke-width="10" stroke-linecap="round"/>
+                    <circle cx="101" cy="134" r="6.5" fill="#FFE0C2"/>
+                    <path d="M32,97 Q60,87 88,97 L96,144 Q60,154 24,144 Z" fill="#AD1457"/>
+                    <rect x="53" y="88" width="14" height="14" fill="#FFE0C2"/>
+                    <ellipse cx="60" cy="62" rx="29" ry="30" fill="#FFE0C2"/>
+                    <path d="M22 55 Q18 12 60 10 Q102 12 98 55 Q102 82 88 92 Q92 60 84 44 Q75 30 60 30 Q45 30 36 44 Q28 60 32 92 Q18 82 22 55 Z" fill="#5D4037"/>
+                    <line x1="60" y1="10" x2="60" y2="26" stroke="#3E2723" stroke-width="2"/>
+                    <circle cx="44" cy="64" r="4.2" fill="#333"/>
+                    <circle cx="76" cy="64" r="4.2" fill="#333"/>
+                    <path d="M39 58 Q44 53 49 58" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path d="M71 58 Q76 53 81 58" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="40" cy="76" rx="5.5" ry="3.5" fill="#F06292" opacity="0.5"/>
+                    <ellipse cx="80" cy="76" rx="5.5" ry="3.5" fill="#F06292" opacity="0.5"/>
+                    <path d="M49 82 Q60 92 71 82" stroke="#C2185B" stroke-width="3" fill="none" stroke-linecap="round"/>
+                    <circle cx="86" cy="40" r="3.5" fill="#F06292"/>
                 </svg>
             </div>
             <div class="feature-title">Gladys Lee</div>
