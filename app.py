@@ -1907,6 +1907,110 @@ def home_page():
         - Personalized recommendations
         """)
 
+    st.markdown("---")
+
+    # Innovation Section
+    st.markdown("### 💡 Innovation")
+
+    innov_col1, innov_col2, innov_col3 = st.columns(3)
+
+    with innov_col1:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🎛️</div>
+            <div class="feature-title">Hyperparameter Tuning</div>
+            <div class="feature-desc">
+                Each model was systematically tuned to maximize performance.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col2:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🔁</div>
+            <div class="feature-title">5-Fold Stratified Cross-Validation</div>
+            <div class="feature-desc">
+                Ensures robust, reliable evaluation across balanced data splits.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col3:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-title">LOF Outlier Detection</div>
+            <div class="feature-desc">
+                Local Outlier Factor used to identify and handle anomalous data points.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    innov_col4, innov_col5, _ = st.columns(3)
+
+    with innov_col4:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">📏</div>
+            <div class="feature-title">Multiple Scaler Comparison</div>
+            <div class="feature-desc">
+                Compared multiple scaling techniques to find the best fit for each model.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with innov_col5:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">⭐</div>
+            <div class="feature-title">Feature Importance</div>
+            <div class="feature-desc">
+                Highlights which health indicators most influence the prediction.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Meet the Team Section
+    st.markdown("### 👥 Meet the Team")
+
+    team_col1, team_col2, team_col3 = st.columns(3)
+
+    with team_col1:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🧑‍💻</div>
+            <div class="feature-title">Lau Kai Hang</div>
+            <div class="feature-desc">
+                KNN &amp; Tuned KNN
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with team_col2:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🧑‍💻</div>
+            <div class="feature-title">Ng Kai Seng</div>
+            <div class="feature-desc">
+                SVM &amp; Tuned SVM
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with team_col3:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon">🧑‍💻</div>
+            <div class="feature-title">Gladys Lee</div>
+            <div class="feature-desc">
+                Random Forest &amp; Tuned RF
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
 # =====================================================
 # History Page
 # =====================================================
