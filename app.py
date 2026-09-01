@@ -712,6 +712,10 @@ div[data-testid="stDownloadButton"] button:hover {
     padding-top: 45px;
     padding-bottom: 45px;
     margin-bottom: 20px;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .feature-icon {
