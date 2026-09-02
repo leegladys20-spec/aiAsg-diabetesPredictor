@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
-import joblib  # Using joblib instead of pickle to fix the STACK_GLOBAL error
+import joblib 
 import plotly.graph_objects as go
 import os
 from datetime import datetime
