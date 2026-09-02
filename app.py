@@ -3710,7 +3710,11 @@ with tab_diabetes:
                     unsafe_allow_html=True
                 )
             
-            if has_healthy:
+            # Show balloons ONLY when the uploaded prediction results contain
+            # non-diabetes predictions and NO diabetes predictions.
+            # This prevents balloons from appearing for diabetes-risk results
+            # or mixed files that contain at least one diabetes prediction.
+            if has_healthy and not has_diabetes:
                 st.balloons()
             
             # Display results with gauge charts
@@ -3894,3 +3898,4 @@ with tab_diabetes:
             use_container_width=True
         )
 
+help me based this code dont change any design,only help me to check and ansure the ballon animaiton only for Predict Disbates when non- disbates
