@@ -1818,10 +1818,7 @@ def bmi_calculator():
                 "bmi": round(bmi, 1),
                 "category": category
             })
-            if category == "Normal Weight":
-                st.balloons()
-            else:
-                st.toast(f"{emoji} Logged! Every entry helps you track your trend.", icon="📈")
+            st.toast(f"{emoji} Logged! Every entry helps you track your trend.", icon="📈")
             st.rerun()
     with clear_col:
         if st.session_state.bmi_history:
@@ -3477,6 +3474,10 @@ with tab_diabetes:
                 ) = predict_patient_manual(patient)
 
                 if prediction is not None:
+                    # Trigger balloons ONLY for an actual manual prediction that is non-diabetes.
+                    # This is a one-shot flag so What-If slider changes cannot trigger balloons.
+                    st.session_state.show_prediction_balloons = (prediction == 0)
+
                     # Save prediction results
                     st.session_state.prediction = prediction
                     st.session_state.patient = patient
@@ -3678,6 +3679,8 @@ with tab_diabetes:
                             st.session_state.upload_debug_rows = debug_rows
                             st.session_state.upload_has_diabetes = has_diabetes
                             st.session_state.upload_has_healthy = has_healthy
+                            # Balloons only when the uploaded prediction result contains NO diabetes cases.
+                            st.session_state.show_upload_prediction_balloons = (has_healthy and not has_diabetes)
                             
                             st.rerun()
             
@@ -3710,11 +3713,7 @@ with tab_diabetes:
                     unsafe_allow_html=True
                 )
             
-            # Show balloons ONLY when the uploaded prediction results contain
-            # non-diabetes predictions and NO diabetes predictions.
-            # This prevents balloons from appearing for diabetes-risk results
-            # or mixed files that contain at least one diabetes prediction.
-            if has_healthy and not has_diabetes:
+            if st.session_state.pop("show_upload_prediction_balloons", False):
                 st.balloons()
             
             # Display results with gauge charts
@@ -3839,7 +3838,11 @@ with tab_diabetes:
                     "<div class='result-badge healthy'>🟢 No Diabetes Detected</div>",
                     unsafe_allow_html=True
                 )
-                st.balloons()
+
+                # Show balloons only once, immediately after the actual Predict Diabetes action.
+                # Do not call st.balloons() directly from the persistent result display.
+                if st.session_state.pop("show_prediction_balloons", False):
+                    st.balloons()
             
             if diabetes_prob is not None:
                 col_a, col_b = st.columns(2)
@@ -3897,5 +3900,3 @@ with tab_diabetes:
             "text/plain",
             use_container_width=True
         )
-
-
